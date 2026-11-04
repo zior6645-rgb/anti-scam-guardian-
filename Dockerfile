@@ -1,9 +1,11 @@
-# Railway builds from the repository root. The release ZIP is uploaded once to this directory.
+# Reconstruct the release source archive from text chunks committed to GitHub.
 FROM alpine:3.20 AS source
-RUN apk add --no-cache unzip
+RUN apk add --no-cache xz
 WORKDIR /bundle
-COPY AntiScamGuardian-0.2.4-Railway.zip /bundle/release.zip
-RUN mkdir -p /source && unzip -q /bundle/release.zip -d /source
+COPY payload/release-0.2.4.tar.xz.b64.part* /bundle/payload/
+RUN cat /bundle/payload/release-0.2.4.tar.xz.b64.part* | base64 -d > /bundle/release.tar.xz \
+    && mkdir -p /source \
+    && tar -xJf /bundle/release.tar.xz -C /source
 
 FROM node:22-alpine AS frontend
 WORKDIR /web
