@@ -43,6 +43,8 @@ jobs:
           test -f release/anti-scam-guardian/app/main.py
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
+          cp overlays/web/result-metadata.js release/anti-scam-guardian/web/src/result-metadata.js
+          cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
 
       - name: Inspect payment handlers and Mini App result rendering
@@ -84,6 +86,7 @@ jobs:
       - name: Build Mini App
         working-directory: release/anti-scam-guardian/web
         run: |
+          node apply-result-metadata.mjs
           npm install --no-audit --no-fund
           npm run build
           test -f ../app/static/index.html
