@@ -5,17 +5,19 @@ RUN apk add --no-cache xz
 WORKDIR /bundle
 COPY payload/release-0.2.4.tar.xz.b64.part* /bundle/payload/
 COPY overlays/app/scanner.py /bundle/overlay/scanner.py
+COPY overlays/web /bundle/overlay/web/
 RUN cat /bundle/payload/release-0.2.4.tar.xz.b64.part* | base64 -d > /bundle/release.tar.xz \
     && mkdir -p /source \
     && tar -xJf /bundle/release.tar.xz -C /source \
-    && cp /bundle/overlay/scanner.py /source/anti-scam-guardian/app/scanner.py
+    && cp /bundle/overlay/scanner.py /source/anti-scam-guardian/app/scanner.py \\\n    && cp /bundle/overlay/web/result-metadata.js /source/anti-scam-guardian/web/src/result-metadata.js
 
 FROM node:22-alpine AS frontend
 WORKDIR /web
 COPY --from=source /source/anti-scam-guardian/web/package.json ./package.json
 RUN npm install --no-audit --no-fund
 COPY --from=source /source/anti-scam-guardian/web/ ./
-RUN npm run build
+COPY --from=source /bundle/overlay/web/apply-result-metadata.mjs ./apply-result-metadata.mjs
+RUN node ./apply-result-metadata.mjs && npm run build
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
