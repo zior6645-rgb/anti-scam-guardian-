@@ -28,6 +28,8 @@
 ~~~env
 BOT_TOKEN=<توکن تازه BotFather>
 BOT_USERNAME=AntiScamGuardianSafe2026Bot
+WEBAPP_URL=https://<RAILWAY_DOMAIN>
+PUBLIC_BASE_URL=https://<RAILWAY_DOMAIN>
 ENVIRONMENT=production
 ALLOW_DEV_AUTH=false
 DATABASE_PATH=/data/guardian.sqlite3
