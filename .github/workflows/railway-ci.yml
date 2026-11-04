@@ -44,6 +44,21 @@ jobs:
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
 
+
+      - name: Inspect payment handlers and Mini App result rendering
+        working-directory: release/anti-scam-guardian
+        run: |
+          echo "===== PAYMENT HANDLER REFERENCES ====="
+          grep -RniE 'pre_checkout_query|successful_payment|send_invoice|sendInvoice|refundStarPayment|telegram_payment_charge_id|XTR|paysupport|invoice' app tests || true
+          echo "===== BOT IMPLEMENTATION ====="
+          sed -n '1,300p' app/bot.py
+          echo "===== MAIN PAYMENT AND SCAN ROUTES ====="
+          grep -n -A55 -B8 -E 'payments|pre_checkout|successful_payment|refund|async def scan|ScanRequest|invoice' app/main.py || true
+          echo "===== FRONTEND SOURCE FILES ====="
+          find web -maxdepth 3 -type f | sort | head -100
+          echo "===== FRONTEND SCAN RESULT REFERENCES ====="
+          grep -RniE 'jetton|token_name|token_symbol|verification|holders_count|risk_level|flags' web/src web 2>/dev/null | head -160 || true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
