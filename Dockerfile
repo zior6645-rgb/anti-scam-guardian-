@@ -1,4 +1,5 @@
 # Reconstruct the pinned source archive and overlay the reviewed release scanner.
+# The archived app.runtime module starts the API and exactly one Telegram bot poller.
 FROM alpine:3.20 AS source
 RUN apk add --no-cache xz
 WORKDIR /bundle
