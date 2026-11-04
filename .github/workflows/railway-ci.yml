@@ -1,16 +1,35 @@
-name: Railway release verification
+name: AntiScam Guardian release verification
 
 on:
   push:
     branches:
-      - railway-deploy-024
+      - main
+      - release-readiness-025
+    paths:
+      - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
+      - "Dockerfile"
+      - "railway.json"
+      - "README.md"
+      - "RAILWAY-DEPLOY-fa.md"
+      - "PRELAUNCH-CHECKLIST-fa.md"
+      - ".github/workflows/railway-ci.yml"
+  pull_request:
+    branches:
       - main
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
       - "Dockerfile"
       - "railway.json"
+      - "README.md"
+      - "RAILWAY-DEPLOY-fa.md"
+      - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -19,13 +38,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify and reconstruct release source
+      - name: Verify and reconstruct source archive
         run: |
+          set -eu
           test -s payload/release-0.2.4.tar.xz.b64.part00
           cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
           mkdir release
           tar -xJf release.tar.xz -C release
+          test -f release/anti-scam-guardian/app/runtime.py
           test -f release/anti-scam-guardian/app/main.py
+          cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
+          cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
+          cp overlays/tests/test_database_refund.py release/anti-scam-guardian/tests/test_database_refund.py
+          cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
+          cp overlays/web/result-metadata.js release/anti-scam-guardian/web/src/result-metadata.js
+          cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
+
+
+      - name: Inspect payment handlers and Mini App result rendering
+        working-directory: release/anti-scam-guardian
+        run: |
+          echo "===== PAYMENT HANDLER REFERENCES ====="
+          grep -RniE 'pre_checkout_query|successful_payment|send_invoice|sendInvoice|refundStarPayment|telegram_payment_charge_id|XTR|paysupport|invoice' app tests || true
+          echo "===== BOT IMPLEMENTATION ====="
+          sed -n '1,300p' app/bot.py
+          echo "===== MAIN PAYMENT AND SCAN ROUTES ====="
+          grep -n -A55 -B8 -E 'payments|pre_checkout|successful_payment|refund|async def scan|ScanRequest|invoice' app/main.py || true
+          echo "===== FRONTEND SOURCE FILES ====="
+          find web -maxdepth 3 -type f | sort | head -100
+          echo "===== FRONTEND SCAN RESULT REFERENCES ====="
+          grep -RniE 'jetton|token_name|token_symbol|verification|holders_count|risk_level|flags' web/src web 2>/dev/null | head -160 || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,6 +83,7 @@ jobs:
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
+          python apply-database-refund-patch.py app/database.py
           python -m compileall -q app tests
           python -m unittest discover -s tests -v
 
@@ -52,9 +95,10 @@ jobs:
       - name: Build Mini App
         working-directory: release/anti-scam-guardian/web
         run: |
+          node apply-result-metadata.mjs
           npm install --no-audit --no-fund
           npm run build
           test -f ../app/static/index.html
 
-      - name: Build Railway Docker image
-        run: docker build -t anti-scam-guardian:railway .
+      - name: Build production Docker image
+        run: docker build -t anti-scam-guardian:release-readiness .

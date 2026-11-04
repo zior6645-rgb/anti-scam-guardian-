@@ -1,0 +1,37 @@
+# چک‌لیست آمادگی عرضه — AntiScam Guardian
+
+## موارد فنی که در مخزن/CI تأیید شده‌اند
+
+- [x] بستهٔ اصلی 0.2.4 بازسازی و ساختار پروژه بررسی شده است.
+- [x] اسکن URL، wallet و Jetton در کد مجزا شده‌اند.
+- [x] خروجی TONAPI شامل شاخص‌های provider و metadata اصلی Jetton است.
+- [x] overlay اسکنر و تست‌های regression به build و CI متصل شده‌اند.
+- [x] اجرای API و تنها یک Telegram long-polling process از طریق `app.runtime` تعریف شده است.
+- [x] Dockerfile چندمرحله‌ای شامل build فرانت‌اند و اجرای runtime غیر root است.
+- [x] CI شاخهٔ release-readiness-025 در اجرای ثبت‌شده موفق شده است: ۴۳ تست Python، build فرانت‌اند Vite و build تصویر Docker.
+- [x] نمایش metadata عمومی wallet و Jetton در Mini App به‌عنوان overlay افزوده و build آن در CI موفق شد.
+- [x] اصلاح زمان‌بندی entitlement بعد از Stars refund با migration افزایشی و تست‌های regression؛ هنوز تست end-to-end تلگرام لازم است.
+- [x] پرداخت‌ها به‌صورت پیش‌فرض غیرفعال هستند.
+
+## بلوک‌کننده‌های عرضه عمومی و درآمدزایی
+
+- [x] اجرای CI پس از تغییر UI و Docker سبز شد: ۴۱ تست Python، build فرانت‌اند و build تصویر Docker.
+- [ ] توکن قبلی BotFather در صورت افشا revoke و توکن تازه فقط در Secret میزبان ذخیره شود.
+- [ ] میزبان عمومی مجاز، دامنه HTTPS و Volume پایدار `/data` تهیه و deploy شود.
+- [ ] production vars تنظیم شوند: `ALLOW_DEV_AUTH=false`، پنجرهٔ اعتبار initData کوتاه و یک replica.
+- [ ] احراز هویت Telegram، Mini App، quota، تاریخچه و هر سه اسکن در میزبان زنده آزمایش شوند.
+- [ ] مجوز و سیاست حفظ حریم خصوصی برای PhishTank یا هر feed تجاری دیگر بررسی شود؛ ارسال URL فقط با رضایت صریح.
+- [ ] اطلاعات حقوقی واقعی اپراتور، راه تماس و سیاست نگهداری/حذف داده تکمیل و بازبینی حقوقی شوند.
+- [ ] آزمون بار، نرخ درخواست، سوءاستفاده، مانیتورینگ، alert و backup/restore اجرا شوند.
+- [ ] منطق entitlement، تمدید، charge idempotency، بازپرداخت و تطبیق مالی بازبینی شود.
+- [ ] چرخهٔ واقعی Telegram Stars در test environment از invoice تا refund انتهابه‌انتها آزمایش شود.
+- [ ] قابلیت برداشت پاداش Stars/TON برای کشور و حساب واقعی مالک بررسی شود؛ قابل تضمین نیست.
+- [ ] ممیزی امنیتی مستقل انجام و یافته‌های پرخطر رفع شوند.
+
+## ممنوع تا پیش از تکمیل موارد بالا
+
+- دریافت پول واقعی یا فعال‌کردن `PAYMENTS_MODE=telegram_stars`.
+- تبلیغ خروجی اسکن به‌عنوان حکم قطعی کلاهبرداری یا تضمین امنیت.
+- درخواست seed phrase، private key، رمز کیف پول یا تأیید انتقال.
+- اجرای چند replica با یک Bot Token و long polling.
+- استقرار عمومی با توکن افشاشده، بدون HTTPS یا بدون ذخیره‌سازی پایدار.
