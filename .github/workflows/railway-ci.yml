@@ -10,6 +10,9 @@ on:
       - "overlays/**"
       - "Dockerfile"
       - "railway.json"
+      - "README.md"
+      - "RAILWAY-DEPLOY-fa.md"
+      - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
   pull_request:
     branches:
@@ -19,6 +22,9 @@ on:
       - "overlays/**"
       - "Dockerfile"
       - "railway.json"
+      - "README.md"
+      - "RAILWAY-DEPLOY-fa.md"
+      - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
   workflow_dispatch:
 
