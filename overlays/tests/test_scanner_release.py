@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from urllib.parse import quote
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -61,7 +62,7 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
             scan_ton_account,
             FakeResponse(200, {"status": "active", "is_scam": False, "balance": 10}),
         )
-        self.assertTrue(url.endswith("/accounts/" + RAW_ADDRESS))
+        self.assertTrue(url.endswith("/accounts/" + quote(RAW_ADDRESS, safe="")))
         self.assertEqual(result["risk_level"], "not_assessed")
         self.assertIs(result["provider_is_scam"], False)
 
@@ -90,7 +91,7 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
                 "holders_count": 123,
             }),
         )
-        self.assertTrue(url.endswith("/jettons/" + RAW_ADDRESS))
+        self.assertTrue(url.endswith("/jettons/" + quote(RAW_ADDRESS, safe="")))
         self.assertEqual(result["token_name"], "Example Token")
         self.assertEqual(result["token_symbol"], "EXT")
         self.assertEqual(result["verification"], "whitelist")
