@@ -10,7 +10,7 @@ if (!main.includes(metadataImport)) {
   if (!main.includes(importAnchor)) {
     throw new Error("Could not find the main.js CSS import anchor");
   }
-  main = main.replace(importAnchor, importAnchor + "\\n" + metadataImport);
+  main = main.replace(importAnchor, importAnchor + "\n" + metadataImport);
 }
 
 const appendAnchor = "  resultBox.append(title, subject, flagsTitle, list, provider, disclaimer);";
@@ -19,7 +19,7 @@ if (!main.includes(appendCall)) {
   if (!main.includes(appendAnchor)) {
     throw new Error("Could not find the renderResult() append anchor");
   }
-  main = main.replace(appendAnchor, appendAnchor + "\\n" + appendCall);
+  main = main.replace(appendAnchor, appendAnchor + "\n" + appendCall);
 }
 await writeFile(mainPath, main);
 
