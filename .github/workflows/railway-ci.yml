@@ -39,26 +39,8 @@ jobs:
           cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
           mkdir release
           tar -xJf release.tar.xz -C release
+          test -f release/anti-scam-guardian/app/runtime.py
           test -f release/anti-scam-guardian/app/main.py
-
-      - name: Inspect archived source interfaces for release compatibility
-        working-directory: release/anti-scam-guardian
-        run: |
-          echo "===== SCANNER.PY ====="
-          cat app/scanner.py
-          echo "===== RUNTIME.PY ====="
-          if [ -f app/runtime.py ]; then cat app/runtime.py; else echo "NO app/runtime.py"; fi
-          echo "===== MAIN.PY ====="
-          sed -n '1,240p' app/main.py
-          echo "===== CONFIG.PY ====="
-          sed -n '1,200p' app/config.py
-          echo "===== TEST SCANNER IMPORTS ====="
-          sed -n '1,180p' tests/test_scanner.py
-          echo "===== TEST API IMPORTS ====="
-          sed -n '1,80p' tests/test_api.py
-
-      - name: Apply release overlay and regression tests
-        run: |
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
 
@@ -72,13 +54,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install "uvicorn>=0.30,<1"
 
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
           python -m compileall -q app tests
-          python -m py_compile "$GITHUB_WORKSPACE/overlays/service_supervisor.py"
           python -m unittest discover -s tests -v
 
       - name: Set up Node
