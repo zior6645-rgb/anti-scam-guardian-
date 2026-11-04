@@ -9,12 +9,12 @@
 - [x] اجرای API و تنها یک Telegram long-polling process از طریق `app.runtime` تعریف شده است.
 - [x] Dockerfile چندمرحله‌ای شامل build فرانت‌اند و اجرای runtime غیر root است.
 - [x] CI شاخهٔ release-readiness-025 در اجرای ثبت‌شده موفق شده است: ۴۱ تست Python، build فرانت‌اند Vite و build تصویر Docker.
-- [x] نمایش metadata عمومی wallet و Jetton در Mini App به‌عنوان overlay افزوده شده؛ اجرای CI پس از این تغییر باید مجدداً سبز شود.
+- [x] نمایش metadata عمومی wallet و Jetton در Mini App به‌عنوان overlay افزوده و build آن در CI موفق شد.
 - [x] پرداخت‌ها به‌صورت پیش‌فرض غیرفعال هستند.
 
 ## بلوک‌کننده‌های عرضه عمومی و درآمدزایی
 
-- [ ] اجرای CI پس از آخرین تغییر UI و Docker سبز شود.
+- [x] اجرای CI پس از تغییر UI و Docker سبز شد: ۴۱ تست Python، build فرانت‌اند و build تصویر Docker.
 - [ ] توکن قبلی BotFather در صورت افشا revoke و توکن تازه فقط در Secret میزبان ذخیره شود.
 - [ ] میزبان عمومی مجاز، دامنه HTTPS و Volume پایدار `/data` تهیه و deploy شود.
 - [ ] production vars تنظیم شوند: `ALLOW_DEV_AUTH=false`، پنجرهٔ اعتبار initData کوتاه و یک replica.
