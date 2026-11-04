@@ -1,23 +1,22 @@
 # AntiScam Guardian
 
-Telegram-first crypto safety assistant MVP.
+Telegram-first crypto safety assistant MVP. Product focus: user-consented suspicious URL screening and basic TON wallet / Jetton metadata checks.
 
-The full project source is stored in `payload/` as Base64 chunks of a compressed XZ archive. Follow [REBUILD.md](./REBUILD.md) to reconstruct and extract it.
+## Current release
 
-## Included
-- Telegram bot and Mini App starter
-- Telegram WebApp `initData` verification
-- TON Connect wallet connection (no seed phrases/private keys)
-- TON address checksum validation
-- URL and basic risk heuristics
-- SQLite persistence and usage limits
-- Optional Telegram Stars subscription code (disabled by default)
-- Docker and GitHub Actions workflow
+This repository deploys release **0.2.4** from the root archive `AntiScamGuardian-0.2.4-Railway.zip`. The archive must be uploaded to the repository root on branch `railway-deploy-024` before merging or deploying.
 
-## Important
-This is an MVP starter, not an audited wallet product or a production-grade security oracle. Risk checks are heuristic and may miss scams or flag legitimate services. Do not rely on results to authorize transactions. The app must never request seed phrases/private keys or custody user funds.
+See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md) for the Persian deployment walkthrough.
 
-Payments are disabled by default. Before charging users, review applicable laws, Telegram's current payment rules, privacy requirements, and relevant provider terms. Never accept real funds until those reviews and end-to-end tests are complete.
+## Safety and product limitations
 
-## Test status
-The backend test suite passed in the build environment (14 tests). The frontend dependency installation/build did not complete in that environment, so the production frontend build is **not verified**. The project is not deployed or live.
+- Payments are disabled by default. Do not accept real payments until legal, policy, and end-to-end payment checks are complete.
+- In Telegram, digital goods and subscription access inside bots and Mini Apps must use Telegram Stars (XTR); direct TON checkout to unlock digital in-app services is not the intended path.
+- TON Connect is read-only for wallet identification. The app must never request seed phrases/private keys or custody user funds.
+- URL and wallet checks are indicators, not a guarantee that an asset, address, token, or transaction is safe. Never use a scan result as the sole reason to approve a transaction.
+- External URL reputation lookup is only performed after the user opts in.
+- SQLite deployment requires one Railway replica and a persistent volume mounted at `/data`.
+
+## Required GitHub artifact
+
+Upload the exact file `AntiScamGuardian-0.2.4-Railway.zip` to the repository root on branch `railway-deploy-024`. GitHub Actions will run Python tests, build the Vite Mini App, and build the Docker image. Merge only after the workflow succeeds.
