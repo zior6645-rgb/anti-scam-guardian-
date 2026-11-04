@@ -142,6 +142,18 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["threat_intelligence"]["status"], "not_checked_no_consent")
         self.assertFalse(result["external_lookup_shared"])
 
+    async def test_url_disclaimer_is_accurate_when_phishtank_is_not_configured(self):
+        settings = SimpleNamespace(phishtank_app_key="")
+        with patch("app.scanner.get_settings", return_value=settings):
+            result = await scan_url("http://wallet-connect-airdrop.invalid/seed")
+
+        self.assertEqual(result["risk_level"], "caution")
+        self.assertEqual(result["threat_intelligence"]["status"], "not_configured")
+        self.assertIn("PhishTank is not configured", result["disclaimer"])
+        self.assertIn("local heuristics only", result["disclaimer"])
+        self.assertNotIn("No match in one threat feed", result["disclaimer"])
+        self.assertIn("does not prove safety", result["disclaimer"])
+
 
 if __name__ == "__main__":
     unittest.main()
