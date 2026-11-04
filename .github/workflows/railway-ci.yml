@@ -32,7 +32,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify, reconstruct, and overlay reviewed release source
+      - name: Verify and reconstruct source archive
         run: |
           set -eu
           test -s payload/release-0.2.4.tar.xz.b64.part00
@@ -40,6 +40,23 @@ jobs:
           mkdir release
           tar -xJf release.tar.xz -C release
           test -f release/anti-scam-guardian/app/main.py
+
+      - name: Inspect archived application interfaces
+        working-directory: release/anti-scam-guardian
+        run: |
+          echo "===== APP SCANNER ====="
+          cat app/scanner.py
+          echo "===== APP RUNTIME ====="
+          if [ -f app/runtime.py ]; then cat app/runtime.py; else echo "NO app/runtime.py"; fi
+          echo "===== APP MAIN IMPORTS AND ROUTES ====="
+          sed -n '1,220p' app/main.py
+          echo "===== BOT LAUNCHER ====="
+          if [ -f app/bot_launcher.py ]; then cat app/bot_launcher.py; else echo "NO app/bot_launcher.py"; fi
+          echo "===== CONFIG FIELDS ====="
+          sed -n '1,180p' app/config.py
+
+      - name: Overlay reviewed scanner and release regression tests
+        run: |
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
           test -f overlays/service_supervisor.py
