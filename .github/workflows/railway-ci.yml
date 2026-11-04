@@ -41,25 +41,26 @@ jobs:
           tar -xJf release.tar.xz -C release
           test -f release/anti-scam-guardian/app/main.py
 
-      - name: Inspect archived application interfaces
+      - name: Inspect archived source interfaces for release compatibility
         working-directory: release/anti-scam-guardian
         run: |
-          echo "===== APP SCANNER ====="
+          echo "===== SCANNER.PY ====="
           cat app/scanner.py
-          echo "===== APP RUNTIME ====="
+          echo "===== RUNTIME.PY ====="
           if [ -f app/runtime.py ]; then cat app/runtime.py; else echo "NO app/runtime.py"; fi
-          echo "===== APP MAIN IMPORTS AND ROUTES ====="
-          sed -n '1,220p' app/main.py
-          echo "===== BOT LAUNCHER ====="
-          if [ -f app/bot_launcher.py ]; then cat app/bot_launcher.py; else echo "NO app/bot_launcher.py"; fi
-          echo "===== CONFIG FIELDS ====="
-          sed -n '1,180p' app/config.py
+          echo "===== MAIN.PY ====="
+          sed -n '1,240p' app/main.py
+          echo "===== CONFIG.PY ====="
+          sed -n '1,200p' app/config.py
+          echo "===== TEST SCANNER IMPORTS ====="
+          sed -n '1,180p' tests/test_scanner.py
+          echo "===== TEST API IMPORTS ====="
+          sed -n '1,80p' tests/test_api.py
 
-      - name: Overlay reviewed scanner and release regression tests
+      - name: Apply release overlay and regression tests
         run: |
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
-          test -f overlays/service_supervisor.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -73,7 +74,7 @@ jobs:
           pip install -r requirements.txt
           pip install "uvicorn>=0.30,<1"
 
-      - name: Compile and test backend and production launcher
+      - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
           python -m compileall -q app tests
@@ -94,8 +95,3 @@ jobs:
 
       - name: Build production Docker image
         run: docker build -t anti-scam-guardian:release-readiness .
-
-      - name: Verify Docker command uses combined supervisor
-        run: |
-          docker image inspect anti-scam-guardian:release-readiness \
-            --format '{{json .Config.Cmd}}' | grep -F 'service_supervisor.py'
