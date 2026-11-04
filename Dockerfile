@@ -1,4 +1,4 @@
-# Build the application from the versioned source archive, then overlay reviewed release fixes.
+# Reconstruct the pinned source archive and overlay the reviewed release scanner.
 FROM alpine:3.20 AS source
 RUN apk add --no-cache xz
 WORKDIR /bundle
@@ -23,16 +23,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=source /source/anti-scam-guardian/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir "uvicorn>=0.30,<1"
+RUN pip install --no-cache-dir -r requirements.txt
 COPY --from=source /source/anti-scam-guardian/app ./app
 COPY --from=frontend /app/static ./app/static
 COPY --from=source /source/anti-scam-guardian/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY overlays/service_supervisor.py /app/service_supervisor.py
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data \
     && chown -R appuser:appuser /app /data \
-    && chmod 755 /usr/local/bin/docker-entrypoint.sh /app/service_supervisor.py
+    && chmod 755 /usr/local/bin/docker-entrypoint.sh
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["python", "/app/service_supervisor.py"]
+CMD ["python", "-m", "app.runtime"]
