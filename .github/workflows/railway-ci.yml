@@ -1,16 +1,29 @@
-name: Railway release verification
+name: AntiScam Guardian release verification
 
 on:
   push:
     branches:
-      - railway-deploy-024
+      - main
+      - release-readiness-025
+    paths:
+      - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
+      - "Dockerfile"
+      - "railway.json"
+      - ".github/workflows/railway-ci.yml"
+  pull_request:
+    branches:
       - main
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
       - "Dockerfile"
       - "railway.json"
       - ".github/workflows/railway-ci.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -19,13 +32,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify and reconstruct release source
+      - name: Verify, reconstruct, and overlay reviewed release source
         run: |
+          set -eu
           test -s payload/release-0.2.4.tar.xz.b64.part00
           cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
           mkdir release
           tar -xJf release.tar.xz -C release
           test -f release/anti-scam-guardian/app/main.py
+          cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
+          cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
+          test -f overlays/service_supervisor.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,11 +54,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install "uvicorn>=0.30,<1"
 
-      - name: Compile and test backend
+      - name: Compile and test backend and production launcher
         working-directory: release/anti-scam-guardian
         run: |
           python -m compileall -q app tests
+          python -m py_compile "$GITHUB_WORKSPACE/overlays/service_supervisor.py"
           python -m unittest discover -s tests -v
 
       - name: Set up Node
@@ -56,5 +75,10 @@ jobs:
           npm run build
           test -f ../app/static/index.html
 
-      - name: Build Railway Docker image
-        run: docker build -t anti-scam-guardian:railway .
+      - name: Build production Docker image
+        run: docker build -t anti-scam-guardian:release-readiness .
+
+      - name: Verify Docker command uses combined supervisor
+        run: |
+          docker image inspect anti-scam-guardian:release-readiness \
+            --format '{{json .Config.Cmd}}' | grep -F 'service_supervisor.py'
