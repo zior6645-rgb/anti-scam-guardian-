@@ -176,6 +176,22 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
         if intelligence["status"] not in {"not_configured", "not_checked_no_consent", "unavailable", "rate_limited"}
         else "local_heuristics_only"
     )
+    feed_status = intelligence["status"]
+    if feed_status == "not_configured":
+        feed_note = "PhishTank is not configured; this scan used local heuristics only."
+    elif feed_status == "not_checked_no_consent":
+        feed_note = "PhishTank was not queried because external sharing was not approved."
+    elif feed_status == "not_listed":
+        feed_note = "PhishTank did not list this URL in the lookup performed."
+    elif feed_status == "listed_not_confirmed":
+        feed_note = "PhishTank returned a listing that is not confirmed as currently valid."
+    elif feed_status == "confirmed_phishing":
+        feed_note = "PhishTank reports this URL as verified, currently valid phishing."
+    elif feed_status == "rate_limited":
+        feed_note = "PhishTank rate-limited the lookup; no feed result is available."
+    else:
+        feed_note = "PhishTank lookup was unavailable or inconclusive."
+
     return {
         "kind": "url",
         "subject": host,
@@ -189,7 +205,8 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
             and intelligence["status"] not in {"unavailable", "rate_limited"}
         ),
         "disclaimer": (
-            "No match in one threat feed and no heuristic flags do not prove safety. "
+            f"{feed_note} "
+            "A lack of detected indicators does not prove safety. "
             "This is a limited screening result, not a security audit."
         ),
     }
