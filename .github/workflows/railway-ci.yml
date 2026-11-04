@@ -1,0 +1,60 @@
+name: Railway release verification
+
+on:
+  push:
+    branches:
+      - railway-deploy-024
+      - main
+    paths:
+      - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "Dockerfile"
+      - "railway.json"
+      - ".github/workflows/railway-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify and reconstruct release source
+        run: |
+          test -s payload/release-0.2.4.tar.xz.b64.part00
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          test -f release/anti-scam-guardian/app/main.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: release/anti-scam-guardian
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile and test backend
+        working-directory: release/anti-scam-guardian
+        run: |
+          python -m compileall -q app tests
+          python -m unittest discover -s tests -v
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build Mini App
+        working-directory: release/anti-scam-guardian/web
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          test -f ../app/static/index.html
+
+      - name: Build Railway Docker image
+        run: docker build -t anti-scam-guardian:railway .
