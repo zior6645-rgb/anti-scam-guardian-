@@ -8,8 +8,9 @@
 - [x] overlay اسکنر و تست‌های regression به build و CI متصل شده‌اند.
 - [x] اجرای API و تنها یک Telegram long-polling process از طریق `app.runtime` تعریف شده است.
 - [x] Dockerfile چندمرحله‌ای شامل build فرانت‌اند و اجرای runtime غیر root است.
-- [x] CI شاخهٔ release-readiness-025 در اجرای ثبت‌شده موفق شده است: ۴۱ تست Python، build فرانت‌اند Vite و build تصویر Docker.
+- [x] CI شاخهٔ release-readiness-025 در اجرای ثبت‌شده موفق شده است: ۴۳ تست Python، build فرانت‌اند Vite و build تصویر Docker.
 - [x] نمایش metadata عمومی wallet و Jetton در Mini App به‌عنوان overlay افزوده و build آن در CI موفق شد.
+- [x] اصلاح زمان‌بندی entitlement بعد از Stars refund با migration افزایشی و تست‌های regression؛ هنوز تست end-to-end تلگرام لازم است.
 - [x] پرداخت‌ها به‌صورت پیش‌فرض غیرفعال هستند.
 
 ## بلوک‌کننده‌های عرضه عمومی و درآمدزایی
