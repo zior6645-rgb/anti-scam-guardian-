@@ -1,7 +1,7 @@
 function formatUnits(rawValue, decimalsValue) {
   if (rawValue === null || rawValue === undefined || rawValue === "") return "";
   const raw = String(rawValue).trim();
-  if (!/^-?\\d+$/.test(raw)) return raw;
+  if (!/^-?\d+$/.test(raw)) return raw;
 
   const decimals = Number(decimalsValue);
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 30) {
