@@ -1,46 +1,48 @@
 # AntiScam Guardian
 
-Telegram-first TON security assistant. This repository currently contains a release-readiness candidate, not a commercially approved security product.
+Telegram-first TON security assistant. This repository contains a release candidate for a limited screening product; it is not an independently audited security service.
 
-## Current state
+## Current capabilities
 
-- The original source release is reconstructed from six Base64 chunks under payload/release-0.2.4.tar.xz.b64.part*.
-- Reviewed code overlays live under overlays/; the Docker build and CI apply the same overlays before packaging and testing.
-- The scanner supports heuristic URL indicators, TON account metadata, and TON Jetton master metadata through TonAPI.
-- The container supervisor starts both the FastAPI Mini App/API and the Telegram long-polling bot in one service.
-- The service is configured for one replica because Telegram long polling must not run in multiple replicas with the same bot token.
-- Payments remain disabled.
+- Telegram Mini App and bot runtime, with a single long-polling bot process.
+- URL syntax checks and local heuristic indicators.
+- Optional PhishTank lookup only after an explicit per-scan user opt-in and only when an operator-supplied application key is configured.
+- TON account metadata through TonAPI, including the provider's current `is_scam` indicator when available.
+- TON Jetton master metadata through TonAPI, including name, symbol, decimals, supply, mintability, holder count, and provider verification classification.
+- The Mini App displays available public account and Jetton metadata. Metadata fields are treated as untrusted display strings and inserted through DOM text nodes.
+- Per-user daily quota, recent scan history, Telegram Mini App `initData` authentication, and a persistent SQLite database.
+- Docker image build and CI verification for the same source archive and reviewed overlays.
 
-## Verification
+## What a scan does not do
 
-GitHub Actions reconstructs the source archive, applies the overlays, compiles and tests the backend, builds the Vite Mini App, builds the Docker image, and verifies that the production image uses the combined process supervisor.
-
-## Important product limitations
-
-- URL scanning is local heuristic analysis only. It is not connected to a live phishing/reputation feed in this release.
-- TON account and Jetton responses are provider metadata, not a complete security verdict or smart-contract audit.
-- TonAPI whitelist does not mean guaranteed safe; graylist and blacklist are provider classifications and can change.
-- A false is_scam value means only that TonAPI did not currently flag the account; it does not prove safety.
-- Never ask for or accept seed phrases, private keys, wallet passwords, or transfers to scan an address.
-- Do not claim that a result guarantees an asset, address, token, contract, or transaction is safe.
-- The service requires valid Telegram Mini App initData in production; development authentication must remain disabled.
-- SQLite must use a persistent volume mounted at /data, and the service must run as one replica.
+- URL checks do not fetch or execute the submitted website. Local heuristics are not a live threat-intelligence verdict.
+- PhishTank is one source, not a complete phishing or malware feed. External lookup is only performed after consent; URL query strings may contain secrets.
+- TonAPI results are public provider metadata, not a wallet reputation audit, token economics review, liquidity analysis, honeypot test, bytecode audit, or transaction simulation.
+- A whitelist or a false `is_scam` value is not proof of safety. Provider classifications can change, and scams may be missed.
+- Never request seed phrases, private keys, wallet passwords, transfers, or transaction approval to perform a scan.
 
 ## Deployment
 
-See RAILWAY-DEPLOY-fa.md. Deployment still requires an operator-controlled hosting account, a fresh BotFather token, a public HTTPS domain, and a persistent volume. The local Termux setup is for testing only and is not a public production host.
+See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md). The service must run on an operator-approved hosting account with HTTPS, a persistent volume mounted at `/data`, exactly one replica, production Telegram authentication, and a freshly rotated bot token. Local Termux is a development/test environment, not a public production host.
 
-## Monetization status
+The Docker image uses `python -m app.runtime` as its process supervisor. Do not override that command with a different supervisor script.
 
-Telegram in-bot digital subscriptions must use Telegram Stars (XTR). This repository does not yet include a complete Stars purchase, pre-checkout, successful-payment, subscription lifecycle, refund, or reconciliation implementation. Keep PAYMENTS_MODE=disabled; do not accept real payments until these flows and the legal/policy review are complete.
+## Monetization status — disabled
+
+The code contains an initial Telegram Stars path: `/premium` sends an XTR invoice, pre-checkout is validated, successful-payment updates are recorded idempotently, `/paysupport` is available, and an admin-only refund command calls the Stars refund API.
+
+That code is **not yet approved for live billing**. Before enabling it, run Telegram's dedicated Stars test environment end-to-end and audit duplicate updates, invoice payload validation, charge reconciliation, refund failures, subscription extension/expiry/refund behavior, support handling, and backup/restore. Keep `PAYMENTS_MODE=disabled` and `STARS_MONTHLY_PRICE=0` until those tests and the legal/policy review pass.
+
+Digital goods and services sold inside Telegram must be charged in Telegram Stars (`XTR`), not directly in TON. Telegram may route eligible developer rewards through Fragment, but its terms state that rewards can be unavailable in some countries or regulatory circumstances. Do not promise that Stars sales can always be withdrawn as TON or treated as guaranteed cash revenue.
 
 ## Before public launch
 
-1. Revoke any BotFather token previously exposed outside the secret manager and issue a new token.
-2. Deploy with HTTPS, a persistent /data volume, one replica, ALLOW_DEV_AUTH=false, and a short Telegram init-data freshness window.
-3. Complete URL threat-intelligence integration with a licensed provider and verify consent/privacy requirements.
-4. Complete Jetton/account regression tests against live and mocked provider responses.
-5. Complete a security review, abuse/rate-limit review, privacy notice, terms, and operator contact details.
-6. Implement and end-to-end test Telegram Stars payments, renewals, cancellations, refunds, and support procedures before enabling monetization.
+1. Revoke any bot token exposed outside a secret manager and create a fresh token in BotFather.
+2. Deploy with HTTPS, persistent `/data`, one replica, `ALLOW_DEV_AUTH=false`, and a short Telegram init-data freshness window.
+3. Complete the live deployment smoke test: `/health`, Mini App authentication, quota, URL, wallet, Jetton, and history.
+4. Decide whether to configure a licensed/approved phishing-intelligence provider and document exactly what URL data is shared after consent.
+5. Complete load/rate-limit/abuse tests, monitoring, backup and restore drills, operator support, and incident response.
+6. Complete legal review of the operator identity, terms, privacy notice, retention/deletion policy, target markets, and hosting/payment eligibility.
+7. Run the full Telegram Stars test lifecycle and independent security review before enabling billing.
 
-This project is not independently audited and is not a security oracle. It must not be marketed as providing guaranteed scam detection or transaction safety.
+This product provides limited risk indicators, not guaranteed scam detection or transaction safety. Do not market it as a security oracle.
