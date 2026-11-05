@@ -69,6 +69,28 @@ def patch_bot_source(source: str) -> str:
         "pre-checkout operator preconditions",
     )
 
+    # Telegram's successful_payment update means the charge has already happened.
+    # A config switch or price change after pre-checkout must not strand a paid user.
+    old_paid_payment_guard = '''        if (
+            settings.payments_mode == "telegram_stars"
+            and payment.currency == "XTR"
+            and payment.invoice_payload == "antiscam:pro:monthly:v1"
+            and payment.total_amount == settings.stars_monthly_price
+            and has_accepted_terms(message.from_user.id)
+        ):'''
+    new_paid_payment_guard = '''        if (
+            payment.currency == "XTR"
+            and payment.invoice_payload == "antiscam:pro:monthly:v1"
+            and payment.total_amount > 0
+            and bool(payment.telegram_payment_charge_id)
+        ):'''
+    source = _replace_once(
+        source,
+        old_paid_payment_guard,
+        new_paid_payment_guard,
+        "successful payment delivery guard",
+    )
+
 
     old_refund = '''    @dp.message(Command("refund"))
     async def refund_payment(message: Message, bot: Bot) -> None:
