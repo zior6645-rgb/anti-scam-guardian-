@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - main
       - commercial-readiness-026
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
@@ -91,3 +90,45 @@ jobs:
           node test-deepmerge-security.mjs
           npm ls --all @tonconnect/ui deepmerge || true
           npm audit --audit-level=high
+
+  python-static-analysis:
+    name: Static security analysis for Python application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Reconstruct and apply production overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
+          cp overlays/app/backup_supervisor.py release/anti-scam-guardian/app/backup_supervisor.py
+          cp overlays/app/restore_backup.py release/anti-scam-guardian/app/restore_backup.py
+          cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
+          cp overlays/app/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
+          cp overlays/app/runtime_security_patch.py release/anti-scam-guardian/app/runtime_security_patch.py
+          cp overlays/tests/test_runtime_security_patch.py release/anti-scam-guardian/tests/test_runtime_security_patch.py
+          python -V
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Run Bandit security checks
+        working-directory: release/anti-scam-guardian
+        run: |
+          python -m pip install --upgrade pip bandit
+          python apply-database-refund-patch.py app/database.py
+          python apply_bot_operator_patch.py app/bot.py
+          python app/runtime_security_patch.py app/runtime.py
+          if grep -q -- '--forwarded-allow-ips' app/runtime.py; then echo 'Wildcard proxy trust remains enabled' >&2; exit 1; fi
+          python -m unittest discover -s tests -p 'test_runtime_security_patch.py' -v
+          echo '--- all Bandit findings, including low severity (informational) ---'
+          bandit -r app -l -ii -f txt || true
+          echo '--- release gate: no medium/high confidence findings ---'
+          bandit -r app -ll -ii -f txt

@@ -54,6 +54,13 @@ def patch_bot_source(source: str) -> str:
     )
     source = _replace_once(
         source,
+        '        provider_token="",',
+        '        # Telegram Stars invoices intentionally use an empty provider token.\n        provider_token="",  # nosec B106',
+        "Telegram Stars empty provider token",
+    )
+
+    source = _replace_once(
+        source,
         '        description="Higher scan quota and extended scan history for 30 days.",',
         '        description="30 days of Pro access. One-time purchase; does not auto-renew.",',
         "30-day invoice description",
