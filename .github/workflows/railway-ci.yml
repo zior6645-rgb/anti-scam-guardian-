@@ -64,6 +64,12 @@ jobs:
         run: |
           echo "===== PAYMENT HANDLER REFERENCES ====="
           grep -RniE 'pre_checkout_query|successful_payment|send_invoice|sendInvoice|refundStarPayment|telegram_payment_charge_id|XTR|paysupport|invoice' app tests || true
+          echo "===== DATABASE IMPLEMENTATION FOR PAYMENT REVIEW ====="
+          sed -n '1,420p' app/database.py
+          echo "===== CONFIGURATION FOR PAYMENT REVIEW ====="
+          sed -n '1,260p' app/config.py
+          echo "===== DATABASE TESTS ====="
+          sed -n '1,260p' tests/test_database.py
           echo "===== BOT IMPLEMENTATION ====="
           sed -n '1,300p' app/bot.py
           echo "===== MAIN PAYMENT AND SCAN ROUTES ====="
