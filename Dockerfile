@@ -21,8 +21,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY --from=source /source/anti-scam-guardian/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir "cryptography>=42,<48"
 COPY --from=source /source/anti-scam-guardian/app ./app
+COPY overlays/app/backup_supervisor.py ./app/backup_supervisor.py
+COPY overlays/app/restore_backup.py ./app/restore_backup.py
 COPY overlays/app/apply-database-refund-patch.py /tmp/apply-database-refund-patch.py
 COPY overlays/app/apply_bot_operator_patch.py /tmp/apply_bot_operator_patch.py
 RUN python /tmp/apply-database-refund-patch.py /app/app/database.py && python /tmp/apply_bot_operator_patch.py /app/app/bot.py && rm /tmp/apply-database-refund-patch.py /tmp/apply_bot_operator_patch.py
@@ -31,4 +33,4 @@ COPY --from=source /source/anti-scam-guardian/docker-entrypoint.sh /usr/local/bi
 RUN useradd --create-home --uid 10001 appuser && mkdir -p /data && chown -R appuser:appuser /app /data && chmod 755 /usr/local/bin/docker-entrypoint.sh
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["python", "-m", "app.runtime"]
+CMD ["python", "-m", "app.backup_supervisor"]
