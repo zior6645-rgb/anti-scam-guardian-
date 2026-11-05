@@ -159,6 +159,7 @@ class RefundHandlerExecutionTests(unittest.IsolatedAsyncioTestCase):
         ]
         if len(functions) != 1:
             raise AssertionError(f"Expected one production refund_payment handler, found {len(functions)}")
+        functions[0].decorator_list = []
         module = ast.Module(
             body=[
                 ast.ImportFrom(
