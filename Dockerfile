@@ -24,7 +24,7 @@ COPY --from=source /source/anti-scam-guardian/requirements.txt ./requirements.tx
 RUN pip install --no-cache-dir -r requirements.txt
 COPY --from=source /source/anti-scam-guardian/app ./app
 COPY overlays/app/apply-database-refund-patch.py /tmp/apply-database-refund-patch.py
-COPY overlays/apply_bot_operator_patch.py /tmp/apply_bot_operator_patch.py
+COPY overlays/app/apply_bot_operator_patch.py /tmp/apply_bot_operator_patch.py
 RUN python /tmp/apply-database-refund-patch.py /app/app/database.py && python /tmp/apply_bot_operator_patch.py /app/app/bot.py && rm /tmp/apply-database-refund-patch.py /tmp/apply_bot_operator_patch.py
 COPY --from=frontend /app/static ./app/static
 COPY --from=source /source/anti-scam-guardian/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
