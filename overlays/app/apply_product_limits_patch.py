@@ -18,7 +18,7 @@ def patch_config_source(source: str) -> str:
     source = _replace_once(
         source,
         "    free_scans_per_day: int\n    initdata_max_age_seconds: int",
-        "    free_scans_per_day: int\n    pro_scans_per_day: int\n    initdata_max_age_seconds: int",
+        "    free_scans_per_day: int\n    pro_scans_per_day: int\n    support_contact: str\n    initdata_max_age_seconds: int",
         "Pro scan limit setting field",
     )
     source = _replace_once(
@@ -26,6 +26,7 @@ def patch_config_source(source: str) -> str:
         '        free_scans_per_day=max(0, _int("FREE_SCANS_PER_DAY", 5)),\n        initdata_max_age_seconds=',
         '        free_scans_per_day=max(0, _int("FREE_SCANS_PER_DAY", 5)),\n'
         '        pro_scans_per_day=max(1, _int("PRO_SCANS_PER_DAY", 100)),\n'
+        '        support_contact=os.getenv("SUPPORT_CONTACT", "").strip(),\n'
         '        initdata_max_age_seconds=',
         "Pro scan limit setting value",
     )
@@ -73,6 +74,8 @@ def patch_main_source(source: str) -> str:
         '        "free_scans_per_day": settings.free_scans_per_day,\n        "scans_used_today": daily_scan_count(telegram_id),',
         '        "free_scans_per_day": settings.free_scans_per_day,\n'
         '        "pro_scans_per_day": settings.pro_scans_per_day,\n'
+        '        "pro_checkout_enabled": (settings.payments_mode == "telegram_stars" and settings.stars_monthly_price > 0 and bool(settings.admin_telegram_ids) and bool(settings.support_contact)),\n'
+        '        "pro_price_stars": settings.stars_monthly_price if settings.payments_mode == "telegram_stars" else None,\n'
         '        "scans_used_today": daily_scan_count(telegram_id),',
         "current account Pro limit",
     )
