@@ -59,6 +59,8 @@ jobs:
           cp overlays/tests/test_database_refund.py release/anti-scam-guardian/tests/test_database_refund.py
           cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
           cp overlays/app/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
+          cp overlays/app/runtime_security_patch.py release/anti-scam-guardian/app/runtime_security_patch.py
+          cp overlays/tests/test_runtime_security_patch.py release/anti-scam-guardian/tests/test_runtime_security_patch.py
           cp overlays/tests/test_bot_operator_patch.py release/anti-scam-guardian/tests/test_bot_operator_patch.py
           cp overlays/tests/test_payment_protocol.py release/anti-scam-guardian/tests/test_payment_protocol.py
           cp overlays/tests/test_telegram_auth_release.py release/anti-scam-guardian/tests/test_telegram_auth_release.py
@@ -86,6 +88,7 @@ jobs:
         run: |
           python apply-database-refund-patch.py app/database.py
           python apply_bot_operator_patch.py app/bot.py
+          python -m app.runtime_security_patch app/runtime.py
           python -m compileall -q app tests apply_bot_operator_patch.py
           python -m unittest discover -s tests -v
 
