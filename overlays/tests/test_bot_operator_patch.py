@@ -21,6 +21,7 @@ from .database import (
     accept_terms,
     activate_star_subscription,
     get_star_charge,
+    recent_star_charges,
     has_accepted_terms,
     init_db,
     record_star_refund,
@@ -171,6 +172,14 @@ class BotOperatorPatchTests(unittest.TestCase):
         self.assertIn("CONFIRMED_NOT_REFUNDED", release)
         self.assertIn("does not issue a Telegram refund", sync)
         self.assertIn("does not cancel or issue a Telegram refund", release)
+
+    def test_recent_charges_command_is_private_admin_only_and_bounded(self):
+        patched = patch_bot_source(BOT_FIXTURE)
+        handler = patched.split('@dp.message(Command("charges"))', 1)[1].split('@dp.message(Command("myid"))', 1)[0]
+        self.assertIn('message.chat.type != "private"', handler)
+        self.assertIn("settings.admin_telegram_ids", handler)
+        self.assertIn("recent_star_charges(10)", handler)
+        self.assertIn("row['charge_id']", handler)
 
     def test_patch_is_idempotent(self):
         once = patch_bot_source(BOT_FIXTURE)
