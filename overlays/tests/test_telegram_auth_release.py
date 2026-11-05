@@ -56,7 +56,7 @@ class TelegramInitDataValidationTests(unittest.TestCase):
             validate_init_data(raw, BOT_TOKEN, max_age_seconds=600, now=1793900100)
 
     def test_rejects_auth_date_more_than_30_seconds_in_the_future(self):
-        raw = signed_init_data(self._fields(auth_date="1793900101"))
+        raw = signed_init_data(self._fields(auth_date="1793900131"))
         with self.assertRaisesRegex(TelegramAuthError, "expired"):
             validate_init_data(raw, BOT_TOKEN, max_age_seconds=600, now=1793900100)
 
