@@ -14,7 +14,9 @@ COPY --from=source /source/anti-scam-guardian/web/package.json ./package.json
 RUN npm install --no-audit --no-fund
 COPY --from=source /source/anti-scam-guardian/web/ ./
 COPY --from=source /bundle/overlay/web/apply-result-metadata.mjs ./apply-result-metadata.mjs
-RUN node ./apply-result-metadata.mjs && npm run build
+COPY --from=source /bundle/overlay/web/patch-deepmerge-security.mjs ./patch-deepmerge-security.mjs
+COPY --from=source /bundle/overlay/web/test-deepmerge-security.mjs ./test-deepmerge-security.mjs
+RUN node ./patch-deepmerge-security.mjs && node ./test-deepmerge-security.mjs && node ./apply-result-metadata.mjs && npm run build
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
