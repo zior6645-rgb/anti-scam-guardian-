@@ -67,6 +67,11 @@ jobs:
           cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
+      - name: Inspect container entrypoint contract
+        run: |
+          echo '=== docker-entrypoint.sh ==='
+          sed -n '1,200p' release/anti-scam-guardian/docker-entrypoint.sh
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
