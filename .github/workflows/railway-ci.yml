@@ -66,6 +66,8 @@ jobs:
           cp overlays/web/wallet-policy-note.js release/anti-scam-guardian/web/src/wallet-policy-note.js
           cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
+          cp overlays/web/patch-deepmerge-security.mjs release/anti-scam-guardian/web/patch-deepmerge-security.mjs
+          cp overlays/web/test-deepmerge-security.mjs release/anti-scam-guardian/web/test-deepmerge-security.mjs
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -96,8 +98,10 @@ jobs:
         working-directory: release/anti-scam-guardian/web
         run: |
           node --test ../tests/test_wallet_policy_note.mjs
-          node apply-result-metadata.mjs
           npm install --no-audit --no-fund
+          node patch-deepmerge-security.mjs
+          node test-deepmerge-security.mjs
+          node apply-result-metadata.mjs
           npm run build
           test -f ../app/static/index.html
 
