@@ -236,6 +236,11 @@ def _write_success_state(timestamp: str) -> None:
 
 async def backup_scheduler() -> None:
     interval = int(os.getenv("BACKUP_INTERVAL_SECONDS", "86400"))
+    print(
+        f"BACKUP_SCHEDULER_STARTED interval_seconds={interval} retry_seconds={RETRY_SECONDS}",
+        file=sys.stderr,
+        flush=True,
+    )
     while True:
         last = _last_success()
         due = last is None or datetime.now(timezone.utc) - last >= timedelta(seconds=interval)
@@ -243,20 +248,32 @@ async def backup_scheduler() -> None:
             try:
                 result = await asyncio.to_thread(run_backup_once)
                 _write_success_state(result["timestamp"])
-                LOGGER.info(
-                    "Encrypted database backup delivered to administrator chat; size=%s sha256=%s message_id=%s",
-                    result["size"], result["sha256"], result["message_id"],
+                message = (
+                    f"BACKUP_SUCCESS timestamp={result['timestamp']} "
+                    f"size={result['size']} sha256={result['sha256']} "
+                    f"message_id={result['message_id']}"
                 )
+                LOGGER.info(message)
+                print(message, file=sys.stderr, flush=True)
             except Exception as exc:
+                message = f"BACKUP_FAILURE retry_in_seconds={RETRY_SECONDS} error={type(exc).__name__}: {exc}"
                 LOGGER.error("Automatic database backup failed; it will be retried: %s", exc)
+                print(message, file=sys.stderr, flush=True)
+        else:
+            next_due = last + timedelta(seconds=interval)
+            message = f"BACKUP_NOT_DUE last_success={last.isoformat()} next_due={next_due.isoformat()}"
+            LOGGER.info(message)
+            print(message, file=sys.stderr, flush=True)
         await asyncio.sleep(RETRY_SECONDS)
 
 
 async def supervise() -> int:
     logging.basicConfig(
-        level=os.getenv("LOG_LEVEL", "INFO").upper(),
+        level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        force=True,
     )
+    print("BACKUP_SUPERVISOR_PROCESS_STARTED", file=sys.stderr, flush=True)
     LOGGER.info("Starting AntiScam Guardian runtime with automatic encrypted daily backups")
     child = await asyncio.create_subprocess_exec(sys.executable, "-m", "app.runtime")
     scheduler = asyncio.create_task(backup_scheduler(), name="encrypted-daily-backup")
