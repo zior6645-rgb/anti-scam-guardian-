@@ -55,7 +55,7 @@ def patch_bot_source(source: str) -> str:
     source = _replace_once(
         source,
         '        provider_token="",',
-        '        # Telegram Stars invoices intentionally use an empty provider token.\\n        provider_token="",  # nosec B106',
+        '        # Telegram Stars invoices intentionally use an empty provider token.\n        provider_token="",  # nosec B106',
         "Telegram Stars empty provider token",
     )
 
