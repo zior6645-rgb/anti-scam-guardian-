@@ -110,5 +110,19 @@ class StarRefundReconciliationTests(unittest.TestCase):
         self.assertLessEqual(len(database.recent_star_charges(1000)), 25)
 
 
+    def test_duplicate_successful_payment_charge_id_only_grants_one_period(self):
+        self.assertTrue(database.activate_star_subscription("charge-idempotency", 424242, 125, "XTR", 30))
+        first_expiry = self._expiry()
+
+        self.assertFalse(database.activate_star_subscription("charge-idempotency", 424242, 125, "XTR", 30))
+        second_expiry = self._expiry()
+
+        self.assertEqual(first_expiry, second_expiry)
+        self.assertTrue(database.is_premium(424242))
+        charge = database.get_star_charge("charge-idempotency")
+        self.assertEqual(charge["amount"], 125)
+        self.assertEqual(charge["currency"], "XTR")
+
+
 if __name__ == "__main__":
     unittest.main()
