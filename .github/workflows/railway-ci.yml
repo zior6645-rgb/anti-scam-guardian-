@@ -61,6 +61,17 @@ jobs:
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
 
+      - name: Inspect API and runtime implementation for security review
+        working-directory: release/anti-scam-guardian
+        run: |
+          echo "===== APP FILES ====="
+          find app -maxdepth 2 -type f | sort
+          echo "===== API IMPLEMENTATION ====="
+          sed -n '1,460p' app/main.py
+          echo "===== RUNTIME IMPLEMENTATION ====="
+          sed -n '1,260p' app/runtime.py
+          echo "===== DEPENDENCIES ====="
+          cat requirements.txt
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
