@@ -23,7 +23,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY --from=source /source/anti-scam-guardian/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir "cryptography>=42,<48"
+RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir "cryptography>=50,<51"
 COPY --from=source /source/anti-scam-guardian/app ./app
 COPY overlays/app/backup_supervisor.py ./app/backup_supervisor.py
 COPY overlays/app/restore_backup.py ./app/restore_backup.py
