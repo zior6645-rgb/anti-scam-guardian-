@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - release-readiness-025
+      - commercial-readiness-026
+      - payment-hardening-026
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
@@ -58,26 +60,6 @@ jobs:
           cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
-
-      - name: Inspect payment handlers and Mini App result rendering
-        working-directory: release/anti-scam-guardian
-        run: |
-          echo "===== PAYMENT HANDLER REFERENCES ====="
-          grep -RniE 'pre_checkout_query|successful_payment|send_invoice|sendInvoice|refundStarPayment|telegram_payment_charge_id|XTR|paysupport|invoice' app tests || true
-          echo "===== DATABASE IMPLEMENTATION FOR PAYMENT REVIEW ====="
-          sed -n '1,420p' app/database.py
-          echo "===== CONFIGURATION FOR PAYMENT REVIEW ====="
-          sed -n '1,260p' app/config.py
-          echo "===== DATABASE TESTS ====="
-          sed -n '1,260p' tests/test_database.py
-          echo "===== BOT IMPLEMENTATION ====="
-          sed -n '1,300p' app/bot.py
-          echo "===== MAIN PAYMENT AND SCAN ROUTES ====="
-          grep -n -A55 -B8 -E 'payments|pre_checkout|successful_payment|refund|async def scan|ScanRequest|invoice' app/main.py || true
-          echo "===== FRONTEND SOURCE FILES ====="
-          find web -maxdepth 3 -type f | sort | head -100
-          echo "===== FRONTEND SCAN RESULT REFERENCES ====="
-          grep -RniE 'jetton|token_name|token_symbol|verification|holders_count|risk_level|flags' web/src web 2>/dev/null | head -160 || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
