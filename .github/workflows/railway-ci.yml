@@ -52,6 +52,9 @@ jobs:
           test -f release/anti-scam-guardian/app/runtime.py
           test -f release/anti-scam-guardian/app/main.py
           cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
+          cp overlays/app/backup_supervisor.py release/anti-scam-guardian/app/backup_supervisor.py
+          cp overlays/app/restore_backup.py release/anti-scam-guardian/app/restore_backup.py
+          cp overlays/tests/test_backup_supervisor.py release/anti-scam-guardian/tests/test_backup_supervisor.py
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
           cp overlays/tests/test_database_refund.py release/anti-scam-guardian/tests/test_database_refund.py
           cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
@@ -64,7 +67,6 @@ jobs:
           cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -75,6 +77,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install "cryptography>=42,<48"
 
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian

@@ -21,11 +21,22 @@ Telegram-first TON security assistant. This repository contains a release candid
 - A whitelist or a false `is_scam` value is not proof of safety. Provider classifications can change, and scams may be missed.
 - Never request seed phrases, private keys, wallet passwords, transfers, or transaction approval to perform a scan.
 
+## Automatic encrypted backups
+
+The runtime supervisor creates a consistent SQLite snapshot using SQLite's backup API, gzip-compresses it, encrypts it with AES-256-GCM, and sends the encrypted file to the first positive/private administrator ID in `ADMIN_TELEGRAM_IDS` through the existing Telegram bot. It attempts the first backup at startup and then repeats every 24 hours after a successful delivery; failures are retried every 15 minutes. Backups larger than 45 MiB are not uploaded, leaving headroom below Telegram's 50 MB Bot API document limit.
+
+Required Railway secret:
+- `BACKUP_ENCRYPTION_KEY`: URL-safe Base64 encoding of exactly 32 random bytes. Generate it once, store it as a Railway secret, and keep an offline copy. Do not put it in Git, Telegram captions, or application logs.
+
+The bot must already have a private chat with the administrator (the administrator should have pressed `/start`). Successful delivery is recorded in `/data/.asg_backup_state.json`; the encrypted files remain in the administrator's Telegram chat. No plaintext database is sent off-host. A SHA-256 digest is included in the document caption.
+
+Restore: download the `.asgbak` document from Telegram, set `BACKUP_ENCRYPTION_KEY` in the local shell, install the same cryptography dependency, and run `python -m app.restore_backup backup.asgbak restored.sqlite3`. The restore tool authenticates/decrypts the file and runs SQLite `integrity_check` before publishing the restored database. Do not overwrite the live database during a restore; first stop the service and preserve the current volume contents.
+
 ## Deployment
 
-See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md). The live Railway service is currently deployed from `commercial-readiness-026`, uses HTTPS and a persistent volume mounted at `/data`, and runs one bot poller. Production settings were explicitly set to `ALLOW_DEV_AUTH=false` and `TELEGRAM_INITDATA_MAX_AGE_SECONDS=600`; the OAuth connection hides the variable values on read-back. Hosting-country eligibility still needs owner/legal verification. Keep the bot token only in the host's secret store; if it is ever exposed, revoke and rotate it. Local Termux is a development/test environment, not a public production host.
+See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md). The live Railway service uses HTTPS and a persistent volume mounted at `/data`, and runs one bot poller. Production settings were explicitly set to `ALLOW_DEV_AUTH=false` and `TELEGRAM_INITDATA_MAX_AGE_SECONDS=600`; the OAuth connection hides the variable values on read-back. Hosting-country eligibility still needs owner/legal verification. Keep the bot token only in the host's secret store; if it is ever exposed, revoke and rotate it. Local Termux is a development/test environment, not a public production host.
 
-The Docker image uses `python -m app.runtime` as its process supervisor. Do not override that command with a different supervisor script.
+The Docker image starts `python -m app.backup_supervisor`, which supervises the unchanged `app.runtime` process and runs the backup scheduler alongside it.
 
 ## Current deployment snapshot — 2026-11-05
 
@@ -45,11 +56,11 @@ Digital goods and services sold inside Telegram must be charged in Telegram Star
 
 ## Before public launch
 
-1. Keep the active bot token only in Railway's secret store. If it is exposed outside a secret manager, revoke it and issue a fresh token in BotFather.
+1. Keep the active bot token only in Railway's secret store. If it is exposed outside a secret manager, revoke and rotate it in BotFather.
 2. Deploy with HTTPS, persistent `/data`, one replica, `ALLOW_DEV_AUTH=false`, and `TELEGRAM_INITDATA_MAX_AGE_SECONDS=600`; production values were set through Railway. The actual Mini App HMAC validation logic has automated regression coverage.
 3. Complete the live deployment smoke test: `/health`, Mini App authentication, quota, URL, wallet, Jetton, and history.
-4. Decide whether to configure a licensed/approved phishing-intelligence provider and document exactly what URL data is shared after consent.
-5. In Railway, open the service's **Backups** tab and enable the **Daily** volume backup schedule, then verify a backup appears and run a documented restore drill. Add an independent off-volume backup if cross-volume disaster recovery is required. Complete load/rate-limit/abuse tests, support-response verification, and incident response.
+4. Confirm a daily encrypted backup arrives in the administrator's private Telegram chat, and periodically perform a restore drill on a separate file.
+5. Decide whether to configure a licensed/approved phishing-intelligence provider and document exactly what URL data is shared after consent.
 6. Complete legal review of the operator identity, terms, privacy notice, retention/deletion policy, target markets, and hosting/payment eligibility.
 7. Run the full Telegram Stars test lifecycle and independent security review before enabling billing.
 
