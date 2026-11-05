@@ -53,6 +53,62 @@ class StarRefundReconciliationTests(unittest.TestCase):
 
         self.assertLess(abs((self._expiry() - expected_end).total_seconds()), 2)
 
+    def test_pending_refund_is_reserved_once_then_completed_once(self):
+        self.assertTrue(database.activate_star_subscription("pending-1", 424242, 100, "XTR", 30))
+        self.assertTrue(database.begin_star_refund("pending-1"))
+        self.assertFalse(database.is_premium(424242))
+        charge = database.get_star_charge("pending-1")
+        self.assertFalse(charge["refunded"])
+        self.assertTrue(charge["refund_pending"])
+        self.assertFalse(database.begin_star_refund("pending-1"))
+
+        self.assertTrue(database.record_star_refund("pending-1"))
+        charge = database.get_star_charge("pending-1")
+        self.assertTrue(charge["refunded"])
+        self.assertFalse(charge["refund_pending"])
+        self.assertFalse(database.record_star_refund("pending-1"))
+
+    def test_releasing_pending_refund_requires_explicit_local_release(self):
+        self.assertTrue(database.activate_star_subscription("pending-2", 424242, 100, "XTR", 30))
+        self.assertTrue(database.begin_star_refund("pending-2"))
+        self.assertFalse(database.is_premium(424242))
+        self.assertTrue(database.cancel_star_refund("pending-2"))
+        self.assertTrue(database.is_premium(424242))
+        charge = database.get_star_charge("pending-2")
+        self.assertFalse(charge["refunded"])
+        self.assertFalse(charge["refund_pending"])
+        self.assertTrue(database.begin_star_refund("pending-2"))
+
+    def test_unknown_charge_cannot_be_reserved_for_refund(self):
+        self.assertFalse(database.begin_star_refund("not-a-charge"))
+        self.assertIsNone(database.get_star_charge("not-a-charge"))
+
+    def test_pending_refund_on_one_charge_does_not_hide_another_unpaid_period(self):
+        now = datetime.now(timezone.utc)
+        self.assertTrue(database.activate_star_subscription("pending-first", 424242, 100, "XTR", 30))
+        self.assertTrue(database.activate_star_subscription("refund-second", 424242, 100, "XTR", 30))
+        self.assertTrue(database.begin_star_refund("pending-first"))
+        self.assertFalse(database.is_premium(424242))
+        self.assertTrue(database.record_star_refund("refund-second"))
+        remaining = self._expiry() - datetime.now(timezone.utc)
+        self.assertGreater(remaining, timedelta(days=29))
+        self.assertLess(remaining, timedelta(days=30, minutes=1))
+        self.assertTrue(database.get_star_charge("pending-first")["refund_pending"])
+        self.assertFalse(database.is_premium(424242))
+        self.assertTrue(database.cancel_star_refund("pending-first"))
+        self.assertTrue(database.is_premium(424242))
+
+    def test_recent_star_charges_are_newest_first_and_show_refund_state(self):
+        self.assertTrue(database.activate_star_subscription("charge-old", 424242, 100, "XTR", 30))
+        self.assertTrue(database.activate_star_subscription("charge-new", 424242, 150, "XTR", 30))
+        self.assertTrue(database.begin_star_refund("charge-new"))
+        rows = database.recent_star_charges(10)
+        self.assertEqual(rows[0]["charge_id"], "charge-new")
+        self.assertEqual(rows[0]["refund_status"], "pending")
+        self.assertEqual(rows[1]["charge_id"], "charge-old")
+        self.assertEqual(rows[1]["refund_status"], "none")
+        self.assertLessEqual(len(database.recent_star_charges(1000)), 25)
+
 
 if __name__ == "__main__":
     unittest.main()

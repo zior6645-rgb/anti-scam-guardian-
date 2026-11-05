@@ -23,13 +23,21 @@ Telegram-first TON security assistant. This repository contains a release candid
 
 ## Deployment
 
-See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md). The service must run on an operator-approved hosting account with HTTPS, a persistent volume mounted at `/data`, exactly one replica, production Telegram authentication, and a freshly rotated bot token. Local Termux is a development/test environment, not a public production host.
+See [RAILWAY-DEPLOY-fa.md](./RAILWAY-DEPLOY-fa.md). The live Railway service is currently deployed from `commercial-readiness-026`, uses HTTPS and a persistent volume mounted at `/data`, and runs one bot poller. Hosting-country eligibility and the final production-authentication values must still be verified by the operator. Keep the bot token only in the host's secret store; if it is ever exposed, revoke and rotate it. Local Termux is a development/test environment, not a public production host.
 
 The Docker image uses `python -m app.runtime` as its process supervisor. Do not override that command with a different supervisor script.
 
+## Current deployment snapshot — 2026-11-05
+
+- Railway service `anti-scam-guardian-bot` is online on branch `commercial-readiness-026` at commit `40cbe06a`.
+- The persistent `/data` volume and HTTPS Railway domain are configured; the current service health check and Telegram polling start were observed in deployment logs.
+- `ADMIN_TELEGRAM_IDS` and `SUPPORT_CONTACT` are configured. `/paysupport` was manually checked and returned the configured support handle.
+- Production billing remains disabled: `PAYMENTS_MODE=disabled` and `STARS_MONTHLY_PRICE=0`.
+- The live Stars checkout and refund lifecycle has not been tested end-to-end in Telegram's test environment. PR #4 is a separate, draft-only hardening branch and must not be treated as deployed.
+
 ## Monetization status — disabled
 
-The code contains an initial Telegram Stars path: `/premium` sends an XTR invoice, pre-checkout is validated, successful-payment updates are recorded idempotently, `/paysupport` is available, and an admin-only refund command calls the Stars refund API.
+The code contains an initial Telegram Stars path: `/premium` sends an XTR invoice, pre-checkout is validated, successful-payment updates are recorded idempotently, `/paysupport` is available, and an admin-only refund command calls the Stars refund API. The deployed refund handler still needs stronger recovery for the case where Telegram accepts a refund but the local database update fails. Draft PR [#4](https://github.com/zior6645-rgb/anti-scam-guardian-/pull/4) adds a persistent pending-refund marker, duplicate-call protection, admin reconciliation commands, and safe fulfillment of a Telegram-confirmed payment even if billing configuration changes after checkout; it is not merged or deployed. Its latest CI run passed 58 Python tests, 2 JavaScript tests, the Mini App build, and the Docker build.
 
 That code is **not yet approved for live billing**. The current offer is a **one-time 30-day pass** and does not auto-renew. Before enabling it, run Telegram's dedicated Stars test environment end-to-end and audit duplicate updates, invoice payload validation, charge reconciliation, refund failures, entitlement expiry/refund behavior, support handling, and backup/restore. The bot must have a configured refund administrator (`ADMIN_TELEGRAM_IDS`) and a published support contact (`SUPPORT_CONTACT`) before it may issue or approve a Stars invoice. Keep `PAYMENTS_MODE=disabled` and `STARS_MONTHLY_PRICE=0` until those tests and the legal/policy review pass.
 
@@ -37,7 +45,7 @@ Digital goods and services sold inside Telegram must be charged in Telegram Star
 
 ## Before public launch
 
-1. Revoke any bot token exposed outside a secret manager and create a fresh token in BotFather.
+1. Keep the active bot token only in Railway's secret store. If it is exposed outside a secret manager, revoke it and issue a fresh token in BotFather.
 2. Deploy with HTTPS, persistent `/data`, one replica, `ALLOW_DEV_AUTH=false`, and a short Telegram init-data freshness window.
 3. Complete the live deployment smoke test: `/health`, Mini App authentication, quota, URL, wallet, Jetton, and history.
 4. Decide whether to configure a licensed/approved phishing-intelligence provider and document exactly what URL data is shared after consent.
