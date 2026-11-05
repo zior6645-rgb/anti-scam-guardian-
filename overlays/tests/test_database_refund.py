@@ -98,6 +98,17 @@ class StarRefundReconciliationTests(unittest.TestCase):
         self.assertTrue(database.cancel_star_refund("pending-first"))
         self.assertTrue(database.is_premium(424242))
 
+    def test_recent_star_charges_are_newest_first_and_show_refund_state(self):
+        self.assertTrue(database.activate_star_subscription("charge-old", 424242, 100, "XTR", 30))
+        self.assertTrue(database.activate_star_subscription("charge-new", 424242, 150, "XTR", 30))
+        self.assertTrue(database.begin_star_refund("charge-new"))
+        rows = database.recent_star_charges(10)
+        self.assertEqual(rows[0]["charge_id"], "charge-new")
+        self.assertEqual(rows[0]["refund_status"], "pending")
+        self.assertEqual(rows[1]["charge_id"], "charge-old")
+        self.assertEqual(rows[1]["refund_status"], "none")
+        self.assertLessEqual(len(database.recent_star_charges(1000)), 25)
+
 
 if __name__ == "__main__":
     unittest.main()
