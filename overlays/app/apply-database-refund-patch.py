@@ -83,6 +83,20 @@ if old_charge_return in source:
 elif new_charge_return not in source:
     raise SystemExit("Could not find star charge return mapping")
 
+old_premium_lookup = '''    row = conn.execute("SELECT expires_at FROM subscriptions WHERE telegram_id=?", (telegram_id,)).fetchone()'''
+new_premium_lookup = '''    pending_refund = conn.execute(
+        "SELECT 1 FROM star_refunds r JOIN star_charges c ON c.charge_id=r.charge_id "
+        "WHERE c.telegram_id=? AND r.status='pending' LIMIT 1",
+        (telegram_id,),
+    ).fetchone()
+    if pending_refund:
+        return False
+    row = conn.execute("SELECT expires_at FROM subscriptions WHERE telegram_id=?", (telegram_id,)).fetchone()'''
+if old_premium_lookup in source:
+    source = source.replace(old_premium_lookup, new_premium_lookup, 1)
+elif new_premium_lookup not in source:
+    raise SystemExit("Could not find premium entitlement lookup")
+
 refund_start = source.find("def record_star_refund(charge_id: str) -> bool:")
 if refund_start < 0:
     raise SystemExit("Could not find record_star_refund")
