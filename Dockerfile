@@ -6,7 +6,7 @@ WORKDIR /bundle
 COPY payload/release-0.2.4.tar.xz.b64.part* /bundle/payload/
 COPY overlays/app/scanner.py /bundle/overlay/scanner.py
 COPY overlays/web /bundle/overlay/web/
-RUN cat /bundle/payload/release-0.2.4.tar.xz.b64.part* | base64 -d > /bundle/release.tar.xz && mkdir -p /source && tar -xJf /bundle/release.tar.xz -C /source && cp /bundle/overlay/scanner.py /source/anti-scam-guardian/app/scanner.py && cp /bundle/overlay/web/result-metadata.js /source/anti-scam-guardian/web/src/result-metadata.js
+RUN cat /bundle/payload/release-0.2.4.tar.xz.b64.part* | base64 -d > /bundle/release.tar.xz && mkdir -p /source && tar -xJf /bundle/release.tar.xz -C /source && cp /bundle/overlay/scanner.py /source/anti-scam-guardian/app/scanner.py && cp /bundle/overlay/web/result-metadata.js /source/anti-scam-guardian/web/src/result-metadata.js && cp /bundle/overlay/web/wallet-policy-note.js /source/anti-scam-guardian/web/src/wallet-policy-note.js
 
 FROM node:22-alpine AS frontend
 WORKDIR /web
