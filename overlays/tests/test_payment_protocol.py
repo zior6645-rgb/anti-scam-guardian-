@@ -184,13 +184,15 @@ class RefundHandlerExecutionTests(unittest.IsolatedAsyncioTestCase):
             self.replies.append(value)
 
     class FakeBot:
-        def __init__(self, result=True, error=None):
+        def __init__(self, result=True, error=None, events=None):
             self.result = result
             self.error = error
+            self.events = events if events is not None else []
             self.calls = 0
 
         async def refund_star_payment(self, **kwargs):
             self.calls += 1
+            self.events.append("telegram")
             if self.error:
                 raise self.error
             return self.result
@@ -243,7 +245,7 @@ class RefundHandlerExecutionTests(unittest.IsolatedAsyncioTestCase):
             "logger": Logger(),
         }
         exec(self.refund_code, namespace)
-        bot = self.FakeBot(result=bot_result, error=bot_error)
+        bot = self.FakeBot(result=bot_result, error=bot_error, events=calls)
         return namespace["refund_payment"], bot, state, calls
 
     async def test_refund_reserves_before_remote_call_and_reconciles_after_acceptance(self):
@@ -252,7 +254,7 @@ class RefundHandlerExecutionTests(unittest.IsolatedAsyncioTestCase):
 
         await handler(message, bot)
 
-        self.assertEqual(calls[:3], ["lookup", "reserve", "record"])
+        self.assertEqual(calls[:4], ["lookup", "reserve", "telegram", "record"])
         self.assertEqual(bot.calls, 1)
         self.assertTrue(state["charge"]["refunded"])
         self.assertFalse(state["charge"]["refund_pending"])
