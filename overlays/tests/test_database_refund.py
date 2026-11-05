@@ -56,6 +56,7 @@ class StarRefundReconciliationTests(unittest.TestCase):
     def test_pending_refund_is_reserved_once_then_completed_once(self):
         self.assertTrue(database.activate_star_subscription("pending-1", 424242, 100, "XTR", 30))
         self.assertTrue(database.begin_star_refund("pending-1"))
+        self.assertFalse(database.is_premium(424242))
         charge = database.get_star_charge("pending-1")
         self.assertFalse(charge["refunded"])
         self.assertTrue(charge["refund_pending"])
@@ -70,7 +71,9 @@ class StarRefundReconciliationTests(unittest.TestCase):
     def test_releasing_pending_refund_requires_explicit_local_release(self):
         self.assertTrue(database.activate_star_subscription("pending-2", 424242, 100, "XTR", 30))
         self.assertTrue(database.begin_star_refund("pending-2"))
+        self.assertFalse(database.is_premium(424242))
         self.assertTrue(database.cancel_star_refund("pending-2"))
+        self.assertTrue(database.is_premium(424242))
         charge = database.get_star_charge("pending-2")
         self.assertFalse(charge["refunded"])
         self.assertFalse(charge["refund_pending"])
@@ -85,11 +88,15 @@ class StarRefundReconciliationTests(unittest.TestCase):
         self.assertTrue(database.activate_star_subscription("pending-first", 424242, 100, "XTR", 30))
         self.assertTrue(database.activate_star_subscription("refund-second", 424242, 100, "XTR", 30))
         self.assertTrue(database.begin_star_refund("pending-first"))
+        self.assertFalse(database.is_premium(424242))
         self.assertTrue(database.record_star_refund("refund-second"))
         remaining = self._expiry() - datetime.now(timezone.utc)
         self.assertGreater(remaining, timedelta(days=29))
         self.assertLess(remaining, timedelta(days=30, minutes=1))
         self.assertTrue(database.get_star_charge("pending-first")["refund_pending"])
+        self.assertFalse(database.is_premium(424242))
+        self.assertTrue(database.cancel_star_refund("pending-first"))
+        self.assertTrue(database.is_premium(424242))
 
 
 if __name__ == "__main__":
