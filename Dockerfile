@@ -29,7 +29,8 @@ COPY overlays/app/backup_supervisor.py ./app/backup_supervisor.py
 COPY overlays/app/restore_backup.py ./app/restore_backup.py
 COPY overlays/app/apply-database-refund-patch.py /tmp/apply-database-refund-patch.py
 COPY overlays/app/apply_bot_operator_patch.py /tmp/apply_bot_operator_patch.py
-RUN python /tmp/apply-database-refund-patch.py /app/app/database.py && python /tmp/apply_bot_operator_patch.py /app/app/bot.py && rm /tmp/apply-database-refund-patch.py /tmp/apply_bot_operator_patch.py
+COPY overlays/app/runtime_security_patch.py /app/app/runtime_security_patch.py
+RUN python /tmp/apply-database-refund-patch.py /app/app/database.py && python /tmp/apply_bot_operator_patch.py /app/app/bot.py && python -m app.runtime_security_patch /app/app/runtime.py && rm /tmp/apply-database-refund-patch.py /tmp/apply_bot_operator_patch.py
 COPY --from=frontend /app/static ./app/static
 COPY --from=source /source/anti-scam-guardian/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN useradd --create-home --uid 10001 appuser && mkdir -p /data && chown -R appuser:appuser /app /data && chmod 755 /usr/local/bin/docker-entrypoint.sh
