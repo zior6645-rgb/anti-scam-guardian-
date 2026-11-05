@@ -207,6 +207,24 @@ def record_star_refund(charge_id: str) -> bool:
             (telegram_id, new_expiry.isoformat(), "telegram_stars"),
         )
         return True
+
+
+def recent_star_charges(limit: int = 10) -> list[dict]:
+    """Return a bounded, newest-first list of charges for private operator support."""
+    try:
+        bounded_limit = max(1, min(int(limit), 25))
+    except (TypeError, ValueError):
+        bounded_limit = 10
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT c.charge_id, c.telegram_id, c.amount, c.currency, c.created_at, "
+            "COALESCE(r.status, 'none') AS refund_status "
+            "FROM star_charges c "
+            "LEFT JOIN star_refunds r ON r.charge_id=c.charge_id "
+            "ORDER BY c.created_at DESC, c.charge_id DESC LIMIT ?",
+            (bounded_limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
 '''
 source = source[:refund_start] + refund_function
 ast.parse(source)
