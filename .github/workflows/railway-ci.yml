@@ -51,6 +51,8 @@ jobs:
           cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
           cp overlays/tests/test_database_refund.py release/anti-scam-guardian/tests/test_database_refund.py
           cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
+          cp overlays/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
+          cp overlays/tests/test_bot_operator_patch.py release/anti-scam-guardian/tests/test_bot_operator_patch.py
           cp overlays/web/result-metadata.js release/anti-scam-guardian/web/src/result-metadata.js
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
@@ -84,7 +86,8 @@ jobs:
         working-directory: release/anti-scam-guardian
         run: |
           python apply-database-refund-patch.py app/database.py
-          python -m compileall -q app tests
+          python apply_bot_operator_patch.py app/bot.py
+          python -m compileall -q app tests apply_bot_operator_patch.py
           python -m unittest discover -s tests -v
 
       - name: Set up Node
