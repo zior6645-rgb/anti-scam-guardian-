@@ -17,14 +17,14 @@ def _replace_once(source: str, old: str, new: str, label: str) -> str:
 def patch_bot_source(source: str) -> str:
     """Patch the archived bot with safe operator setup and explicit pass wording."""
     if "import os\n" not in source:
-        source = _replace_once(
+        source = _replace_once(source, "import logging\n", "import logging\nimport os\n", "logging import")
+
+    source = _replace_once(
         source,
-        "    activate_star_subscription,\n    get_star_charge,\n",
-        "    activate_star_subscription,\n    begin_star_refund,\n    cancel_star_refund,\n    get_star_charge,\n",
+        "    get_star_charge,\n",
+        "    begin_star_refund,\n    cancel_star_refund,\n    get_star_charge,\n",
         "refund coordination imports",
     )
-
-    source = _replace_once(source, "import logging\n", "import logging\nimport os\n", "logging import")
 
     source = _replace_once(
         source,
