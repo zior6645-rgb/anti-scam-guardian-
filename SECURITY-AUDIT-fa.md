@@ -82,3 +82,21 @@ URL scanner عمدتاً heuristic است؛ در تنظیمات مشاهده‌�
 - CI و Docker هر دو بعد از نصب npm، patch محلی deepmerge را اجرا کرده و regression test را پیش از build اجرا می‌کنند.
 - GitHub Actions workflowها به majorهای سازگار با Node 24 ارتقا یافته‌اند تا هشدار پایان Node 20 رفع شود.
 - اسکن npm همچنان نسخهٔ upstream آسیب‌پذیر را در metadata گزارش می‌کند؛ mitigation محلی به معنی انتشار upstream یا پاک‌شدن هشدار SCA نیست. لازم است پس از انتشار رسمی deepmerge اصلاح‌شده، patch محلی بازبینی و در صورت مناسب حذف شود.
+
+
+## ۷) ممیزی استاتیک و کاهش اعتماد پروکسی — PR #13
+
+در شاخهٔ اصلاحی، Bandit روی کد Python بازسازی‌شده و overlayهای production اجرا شد. بررسی اولیه دو مورد متوسط پیدا کرد:
+
+- `B310` روی ارسال بکاپ: مقصد درخواست ثابت و صریحاً `https://api.telegram.org` است و هیچ URL دلخواه کاربر به `urlopen` داده نمی‌شود؛ استثنا با دلیل در همان خط ثبت شده است.
+- `B104` روی bind به `0.0.0.0`: این bind برای دریافت ترافیک ورودی Railway از بیرون کانتینر لازم است؛ استثنا با توضیح جداگانه و محدود به همان خط ثبت شده است.
+
+در عین حال، `--proxy-headers` و `--forwarded-allow-ips *` از فرمان Uvicorn حذف شدند. در سورس برنامه هیچ مصرفی از `request.client`، `request.base_url` یا هدرهای `X-Forwarded-*` یافت نشد؛ در نتیجه اعتماد به هر مبدأ دلخواه برای هدرهای ارسالی حذف شد. سه آزمون regression رفتار patch، idempotency و fail-closed را بررسی می‌کنند.
+
+روی commit اصلاحی PR #13:
+- Bandit در آستانهٔ medium/high، هیچ یافته‌ای گزارش نکرد؛ سطح Medium=0 و High=0 بود. یک مورد Low در گزارش کامل‌تر برای triage باقی می‌ماند و نباید آن را معادل پاک بودن مطلق اسکن دانست.
+- `pip-audit` برای وابستگی‌های Python، شامل cryptography نسخهٔ production، `No known vulnerabilities found` گزارش کرد.
+- `npm audit` دو یافتهٔ کم‌خطر upstream در deepmerge را هنوز ثبت می‌کند؛ mitigation محلی و آزمون prototype poisoning پیش از build موفق‌اند.
+- CI ساخت کامل release، Mini App و Docker را با موفقیت تمام کرد.
+
+تغییر حذف اعتماد wildcard به هدرهای proxy بعد از ادغام در Docker production اعمال می‌شود؛ تا پیش از ادغام و استقرار، این اصلاح فقط در شاخهٔ PR است.
