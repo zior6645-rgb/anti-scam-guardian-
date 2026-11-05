@@ -16,6 +16,16 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from .config import get_settings
+from .database import (
+    TERMS_VERSION,
+    accept_terms,
+    activate_star_subscription,
+    get_star_charge,
+    has_accepted_terms,
+    init_db,
+    record_star_refund,
+    upsert_user,
+)
 
 settings = get_settings()
 
@@ -74,6 +84,34 @@ async def send_pro_invoice(bot: Bot, chat_id: int, user_id: int) -> None:
             "Never send your wallet recovery phrase, private key, password, or authentication code."
         )
 
+    @dp.message(Command("refund"))
+    async def refund_payment(message: Message, bot: Bot) -> None:
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        parts = (message.text or "").split(maxsplit=1)
+        if len(parts) != 2:
+            await message.answer("Usage: /refund TELEGRAM_PAYMENT_CHARGE_ID")
+            return
+        charge_id = parts[1].strip()
+        charge = get_star_charge(charge_id)
+        if not charge:
+            await message.answer("Charge ID not found in this bot's payment records.")
+            return
+        if charge["refunded"]:
+            await message.answer("This charge is already recorded as refunded.")
+            return
+        if charge["currency"] != "XTR":
+            await message.answer("Only Telegram Stars charges can be refunded by this command.")
+            return
+        try:
+            await bot.refund_star_payment(user_id=charge["telegram_id"], telegram_payment_charge_id=charge_id)
+            record_star_refund(charge_id)
+            await message.answer("Telegram accepted the refund request. Verify its status in the bot's payment records.")
+        except Exception:
+            logger.exception("Telegram Stars refund failed")
+            await message.answer("Refund request failed. Check the charge ID and Telegram Bot API status, then retry or contact support.")
+
     @dp.message(Command("help"))
     async def help_command(message: Message) -> None:
         await message.answer("Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport. TON Connect is read-only in this version.")
@@ -110,6 +148,29 @@ class BotOperatorPatchTests(unittest.TestCase):
         self.assertIn("Billing support:", handler)
         self.assertIn("support contact has not been configured", handler)
         self.assertIn("Never send your wallet recovery phrase", handler)
+
+    def test_refund_handler_reserves_then_calls_telegram_then_reconciles(self):
+        patched = patch_bot_source(BOT_FIXTURE)
+        handler = patched.split('@dp.message(Command("refund"))', 1)[1].split('@dp.message(Command("refundsync"))', 1)[0]
+        reserve = handler.index("begin_star_refund(charge_id)")
+        remote = handler.index("bot.refund_star_payment")
+        reconcile = handler.index("record_star_refund(charge_id)")
+        self.assertLess(reserve, remote)
+        self.assertLess(remote, reconcile)
+        self.assertIn("pending marker retained", handler)
+        self.assertIn("Do not repeat /refund", handler)
+
+    def test_refund_recovery_commands_are_admin_only_and_require_explicit_confirmation(self):
+        patched = patch_bot_source(BOT_FIXTURE)
+        sync = patched.split('@dp.message(Command("refundsync"))', 1)[1].split('@dp.message(Command("refundrelease"))', 1)[0]
+        release = patched.split('@dp.message(Command("refundrelease"))', 1)[1].split('@dp.message(Command("myid"))', 1)[0]
+        for handler in (sync, release):
+            self.assertIn("settings.admin_telegram_ids", handler)
+            self.assertIn('message.chat.type != "private"', handler)
+        self.assertIn("CONFIRMED_REFUNDED", sync)
+        self.assertIn("CONFIRMED_NOT_REFUNDED", release)
+        self.assertIn("does not issue a Telegram refund", sync)
+        self.assertIn("does not cancel or issue a Telegram refund", release)
 
     def test_patch_is_idempotent(self):
         once = patch_bot_source(BOT_FIXTURE)
