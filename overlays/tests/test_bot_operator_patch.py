@@ -159,7 +159,7 @@ class BotOperatorPatchTests(unittest.TestCase):
     def test_pro_invoice_is_described_as_one_time_30_day_pass(self):
         patched = patch_bot_source(BOT_FIXTURE)
         self.assertIn('title="AntiScam Guardian Pro — 30-day pass"', patched)
-        self.assertIn('description="30 days of Pro access. One-time purchase; does not auto-renew."', patched)
+        self.assertIn('description="Up to 100 scans per day and 50 recent reports for 30 days. One-time purchase; no auto-renewal."', patched)
         self.assertIn("Telegram Stars invoices intentionally use an empty provider token.", patched)
         self.assertIn('provider_token="",  # nosec B106', patched)
 
@@ -208,6 +208,23 @@ class BotOperatorPatchTests(unittest.TestCase):
         self.assertIn("settings.admin_telegram_ids", handler)
         self.assertIn("recent_star_charges(10)", handler)
         self.assertIn("row['charge_id']", handler)
+
+    def test_plans_command_discloses_limits_one_time_pass_and_disabled_checkout(self):
+        patched = patch_bot_source(BOT_FIXTURE)
+        handler = patched.split('@dp.message(Command("plans"))', 1)[1].split(
+            '@dp.message(Command("help"))', 1
+        )[0]
+        self.assertIn("5 scans per day", handler)
+        self.assertIn("5 most recent reports", handler)
+        self.assertIn("up to 100 scans per day", handler)
+        self.assertIn("50 most recent reports", handler)
+        self.assertIn("one-time 30-day pass", handler)
+        self.assertIn("does not auto-renew", handler)
+        self.assertIn("Telegram Stars (XTR)", handler)
+        self.assertIn("TON or USDT transfers", handler)
+        self.assertIn("Pro checkout is disabled in this beta", handler)
+        help_handler = patched.split('@dp.message(Command("help"))', 1)[1]
+        self.assertIn("/plans", help_handler)
 
     def test_patch_is_idempotent(self):
         once = patch_bot_source(BOT_FIXTURE)
