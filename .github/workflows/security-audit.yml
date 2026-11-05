@@ -123,4 +123,8 @@ jobs:
           python -m pip install --upgrade pip bandit
           python apply-database-refund-patch.py app/database.py
           python apply_bot_operator_patch.py app/bot.py
+          echo '--- runtime proxy/header usage ---'
+          grep -RniE 'request\.client|request\.base_url|url_for|forwarded|x-forwarded|scope.*client' app || true
+          echo '--- runtime entrypoint ---'
+          sed -n '55,90p' app/runtime.py
           bandit -r app -ll -ii -f txt
