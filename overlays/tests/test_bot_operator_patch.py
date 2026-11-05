@@ -76,7 +76,18 @@ async def send_pro_invoice(bot: Bot, chat_id: int, user_id: int) -> None:
             and payment.total_amount == settings.stars_monthly_price
             and has_accepted_terms(message.from_user.id)
         ):
-            await message.answer("Payment confirmed. Pro access is active for 30 days.")
+            upsert_user(message.from_user.id, message.from_user.username)
+            inserted = activate_star_subscription(
+                payment.telegram_payment_charge_id,
+                message.from_user.id,
+                payment.total_amount,
+                payment.currency,
+                30,
+            )
+            if inserted:
+                await message.answer("Payment confirmed. Pro access is active for 30 days.")
+            else:
+                await message.answer("This payment was already processed. Your previous Pro entitlement remains active.")
 
     @dp.message(Command("paysupport", "support"))
     async def pay_support(message: Message) -> None:
