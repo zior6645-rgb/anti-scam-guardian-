@@ -168,4 +168,4 @@ jobs:
                   print(f"--- lines {first}-{min(last, len(lines))} ---")
                   for index in range(first-1, min(last, len(lines))):
                       print(f"{index+1}: {lines[index]}")
-          PYPY
+          PY
