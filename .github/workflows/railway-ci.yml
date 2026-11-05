@@ -71,6 +71,12 @@ jobs:
         run: |
           echo '=== docker-entrypoint.sh ==='
           sed -n '1,200p' release/anti-scam-guardian/docker-entrypoint.sh
+          echo '=== app/__init__.py ==='
+          sed -n '1,160p' release/anti-scam-guardian/app/__init__.py
+          echo '=== logging configuration ==='
+          grep -R -n -E 'basicConfig|dictConfig|setLevel|propagate' release/anti-scam-guardian/app || true
+          echo '=== app/runtime.py ==='
+          sed -n '1,220p' release/anti-scam-guardian/app/runtime.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
