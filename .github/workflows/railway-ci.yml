@@ -71,6 +71,16 @@ jobs:
           sed -n '1,460p' app/main.py
           echo "===== RUNTIME IMPLEMENTATION ====="
           sed -n '1,260p' app/runtime.py
+          echo "===== TELEGRAM AUTHENTICATION ====="
+          sed -n '1,300p' app/telegram_auth.py
+          echo "===== LEGAL TEXT ====="
+          sed -n '1,340p' app/legal.py
+          echo "===== SINGLE-INSTANCE LOCK ====="
+          sed -n '1,260p' app/instance_lock.py
+          echo "===== BOT LAUNCHER ====="
+          sed -n '1,260p' app/bot_launcher.py
+          echo "===== TEST FILES ====="
+          find tests -maxdepth 2 -type f | sort
           echo "===== DEPENDENCIES ====="
           cat requirements.txt
       - name: Set up Python
