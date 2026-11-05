@@ -22,6 +22,10 @@ class RuntimeSecurityPatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             patch_runtime_source('await create_subprocess_exec("--host", "0.0.0.0")')
 
+    def test_duplicate_proxy_configurations_fail_closed(self):
+        with self.assertRaises(ValueError):
+            patch_runtime_source(OLD + OLD)
+
 
 if __name__ == "__main__":
     unittest.main()
