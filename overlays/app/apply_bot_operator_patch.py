@@ -22,7 +22,7 @@ def patch_bot_source(source: str) -> str:
     source = _replace_once(
         source,
         "    get_star_charge,\n",
-        "    begin_star_refund,\n    cancel_star_refund,\n    get_star_charge,\n",
+        "    begin_star_refund,\n    cancel_star_refund,\n    get_star_charge,\n    recent_star_charges,\n",
         "refund coordination imports",
     )
 
@@ -248,6 +248,24 @@ def patch_bot_source(source: str) -> str:
             "The local pending marker was released. This command does not cancel or issue a Telegram refund; "
             "use it only after independently confirming Telegram did not refund this charge."
         )
+
+    @dp.message(Command("charges"))
+    async def list_recent_charges(message: Message) -> None:
+        if message.chat.type != "private":
+            await message.answer("Run payment administration commands in a private chat with this bot.")
+            return
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        rows = recent_star_charges(10)
+        if not rows:
+            await message.answer("No successful Stars charges are recorded yet.")
+            return
+        lines = [
+            f"{row['created_at']} | {row['amount']} {row['currency']} | user {row['telegram_id']} | {row['refund_status']}\\n{row['charge_id']}"
+            for row in rows
+        ]
+        await message.answer("Latest Telegram Stars charges (newest first):\\n\\n" + "\\n\\n".join(lines))
 '''
     source = _replace_once(source, old_refund, new_refund, "refund lifecycle handler")
 
@@ -296,7 +314,7 @@ def patch_bot_source(source: str) -> str:
     source = _replace_once(
         source,
         'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport. TON Connect is read-only in this version.',
-        'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport, /myid. Refund administration: /refund, /refundsync, /refundrelease (operator only). TON Connect is read-only in this version.',
+        'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport, /myid. Payment administration: /charges, /refund, /refundsync, /refundrelease (operator only). TON Connect is read-only in this version.',
         "help command list",
     )
 
