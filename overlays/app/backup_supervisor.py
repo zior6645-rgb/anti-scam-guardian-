@@ -116,6 +116,24 @@ def gzip_file(source: Path, destination: Path) -> None:
                 dst.write(chunk)
 
 
+def verify_encrypted_sqlite_backup(backup_path: Path, key: bytes) -> None:
+    """Decrypt a newly-created backup and verify its gzip stream and SQLite integrity."""
+    with tempfile.TemporaryDirectory(prefix="asg-verify-") as temp_dir:
+        temp = Path(temp_dir)
+        compressed = temp / "guardian.sqlite3.gz"
+        restored = temp / "guardian.sqlite3"
+        decrypt_file(backup_path, compressed, key)
+        with gzip.open(compressed, "rb") as src, restored.open("wb") as dst:
+            while chunk := src.read(CHUNK_BYTES):
+                dst.write(chunk)
+        with sqlite3.connect(restored) as database:
+            check = database.execute("PRAGMA integrity_check").fetchone()
+            if not check or check[0] != "ok":
+                raise RuntimeError(
+                    f"Encrypted backup restore integrity_check failed: {check[0] if check else 'no result'}"
+                )
+
+
 def _first_private_admin_id(raw_ids: str) -> int:
     candidates = [int(item) for item in re.findall(r"-?\d+", raw_ids)]
     for candidate in candidates:
@@ -194,6 +212,7 @@ def run_backup_once() -> dict:
         create_sqlite_snapshot(database_path, snapshot)
         gzip_file(snapshot, compressed)
         encrypt_file(compressed, encrypted, key)
+        verify_encrypted_sqlite_backup(encrypted, key)
         size = encrypted.stat().st_size
         digest = hashlib.sha256(encrypted.read_bytes()).hexdigest()
         caption = (
