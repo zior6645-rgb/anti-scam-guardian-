@@ -17,6 +17,9 @@ NEW = '''            sys.executable, "-m", "uvicorn", "app.main:app",
 
 def patch_runtime_source(source: str) -> str:
     """Stop trusting arbitrary X-Forwarded-* senders; this app does not consume proxy headers."""
+    occurrences = source.count(OLD)
+    if occurrences > 1:
+        raise ValueError("Found multiple Uvicorn proxy configurations; refusing a partial patch")
     if OLD not in source:
         if NEW in source and "--forwarded-allow-ips" not in source:
             return source
