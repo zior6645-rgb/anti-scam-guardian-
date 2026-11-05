@@ -72,6 +72,16 @@ jobs:
           find app -maxdepth 2 -type f -print | sort
           echo "=== AUTH AND DATABASE SETTINGS ==="
           grep -R -n -E 'ALLOW_DEV_AUTH|TELEGRAM_INITDATA_MAX_AGE_SECONDS|auth_date|initData|init_data|hmac|sqlite3.connect|DATABASE_PATH|backup|restore' app || true
+          echo "=== TELEGRAM AUTH MODULE ==="
+          cat app/telegram_auth.py
+          echo "=== PRODUCTION CONFIG MODULE ==="
+          sed -n '1,150p' app/config.py
+          echo "=== LEGAL/POLICY MODULE ==="
+          sed -n '1,260p' app/legal.py
+          echo "=== DATABASE SCHEMA AND INIT ==="
+          sed -n '1,260p' app/database.py
+          echo "=== RUNTIME ENTRYPOINT ==="
+          sed -n '1,240p' app/runtime.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
