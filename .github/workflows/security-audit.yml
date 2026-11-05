@@ -110,6 +110,8 @@ jobs:
           cp overlays/app/restore_backup.py release/anti-scam-guardian/app/restore_backup.py
           cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
           cp overlays/app/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
+          cp overlays/app/runtime_security_patch.py release/anti-scam-guardian/app/runtime_security_patch.py
+          cp overlays/tests/test_runtime_security_patch.py release/anti-scam-guardian/tests/test_runtime_security_patch.py
           python -V
 
       - name: Set up Python
@@ -123,6 +125,8 @@ jobs:
           python -m pip install --upgrade pip bandit
           python apply-database-refund-patch.py app/database.py
           python apply_bot_operator_patch.py app/bot.py
+          python -m app.runtime_security_patch app/runtime.py
+          python -m unittest discover -s tests -p 'test_runtime_security_patch.py' -v
           echo '--- runtime proxy/header usage ---'
           grep -RniE 'request\.client|request\.base_url|url_for|forwarded|x-forwarded|scope.*client' app || true
           echo '--- runtime entrypoint ---'
