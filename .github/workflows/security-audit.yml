@@ -128,8 +128,7 @@ jobs:
           python app/runtime_security_patch.py app/runtime.py
           if grep -q -- '--forwarded-allow-ips' app/runtime.py; then echo 'Wildcard proxy trust remains enabled' >&2; exit 1; fi
           python -m unittest discover -s tests -p 'test_runtime_security_patch.py' -v
-          echo '--- runtime proxy/header usage ---'
-          grep -RniE 'request\.client|request\.base_url|url_for|forwarded|x-forwarded|scope.*client' app || true
-          echo '--- runtime entrypoint ---'
-          sed -n '55,90p' app/runtime.py
+          echo '--- all Bandit findings, including low severity (informational) ---'
+          bandit -r app -l -ii -f txt || true
+          echo '--- release gate: no medium/high confidence findings ---'
           bandit -r app -ll -ii -f txt
