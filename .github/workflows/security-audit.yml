@@ -132,3 +132,40 @@ jobs:
           bandit -r app -l -ii -f txt || true
           echo '--- release gate: no medium/high confidence findings ---'
           bandit -r app -ll -ii -f txt
+
+  product-feature-audit:
+    name: Inspect archived product flows before commercial changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Reconstruct and inspect product paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          python - <<'PY'
+          from pathlib import Path
+          root = Path("release/anti-scam-guardian")
+          ranges = {
+              "app/config.py": [(1, 110)],
+              "app/database.py": [(105, 160)],
+              "app/main.py": [(105, 195)],
+              "app/bot.py": [(55, 115), (210, 250)],
+              "web/src/main.js": [(1, 180)],
+              "web/index.html": [(1, 220)],
+          }
+          for rel, spans in ranges.items():
+              path = root / rel
+              if not path.exists():
+                  continue
+              lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+              print(f"\\n===== {rel} ({len(lines)} lines) =====")
+              for first, last in spans:
+                  print(f"--- lines {first}-{min(last, len(lines))} ---")
+                  for index in range(first-1, min(last, len(lines))):
+                      print(f"{index+1}: {lines[index]}")
+          PY
