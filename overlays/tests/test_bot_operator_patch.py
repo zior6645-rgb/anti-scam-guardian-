@@ -130,6 +130,21 @@ class BotOperatorPatchTests(unittest.TestCase):
         self.assertIn("bool(settings.admin_telegram_ids)", pre_checkout)
         self.assertIn('bool(os.getenv("SUPPORT_CONTACT", "").strip())', pre_checkout)
 
+    def test_successful_payment_is_delivered_even_if_billing_config_changes_after_checkout(self):
+        patched = patch_bot_source(BOT_FIXTURE)
+        handler = patched.split("@dp.message(F.successful_payment)", 1)[1].split(
+            '@dp.message(Command("paysupport", "support"))', 1
+        )[0]
+        guard = handler.split("if (", 1)[1].split("):", 1)[0]
+        self.assertNotIn("settings.payments_mode", guard)
+        self.assertNotIn("settings.stars_monthly_price", guard)
+        self.assertNotIn("has_accepted_terms", guard)
+        self.assertIn('payment.currency == "XTR"', guard)
+        self.assertIn('payment.invoice_payload == "antiscam:pro:monthly:v1"', guard)
+        self.assertIn("payment.total_amount > 0", guard)
+        self.assertIn("bool(payment.telegram_payment_charge_id)", guard)
+        self.assertIn("activate_star_subscription(", handler)
+
     def test_pro_invoice_is_described_as_one_time_30_day_pass(self):
         patched = patch_bot_source(BOT_FIXTURE)
         self.assertIn('title="AntiScam Guardian Pro — 30-day pass"', patched)
