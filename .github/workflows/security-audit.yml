@@ -132,3 +132,56 @@ jobs:
           bandit -r app -l -ii -f txt || true
           echo '--- release gate: no medium/high confidence findings ---'
           bandit -r app -ll -ii -f txt
+
+  product-feature-audit:
+    name: Inspect archived product flows before commercial changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Reconstruct and inspect product paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          python - <<'PY'
+          from pathlib import Path
+          files = [
+              "app/main.py",
+              "app/database.py",
+              "app/bot.py",
+              "app/config.py",
+              "web/src/main.js",
+              "web/src/style.css",
+          ]
+          roots = [Path("release/anti-scam-guardian")]
+          keywords = (
+              "scan_url", "scan_ton_account", "scan_ton_jetton",
+              "share_with_phishtank", "FREE_SCANS_PER_DAY",
+              "is_premium", "check_quota", "quota", "history",
+              "premium", "successful_payment", "CommandStart",
+              "async def start", "function renderResult", "renderResult",
+              "risk_level", "scan_type", "scanUrl",
+          )
+          for rel in files:
+              path = roots[0] / rel
+              if not path.exists():
+                  continue
+              lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+              hits = [i for i, line in enumerate(lines) if any(k.lower() in line.lower() for k in keywords)]
+              if not hits:
+                  continue
+              print(f"\\n===== {rel} ({len(lines)} lines; {len(hits)} matching lines) =====")
+              shown = set()
+              for i in hits:
+                  start, end = max(0, i-4), min(len(lines), i+8)
+                  if any(n in shown for n in range(start, end)):
+                      continue
+                  print(f"--- lines {start+1}-{end} ---")
+                  for n in range(start, end):
+                      print(f"{n+1}: {lines[n]}")
+                      shown.add(n)
+          PY
