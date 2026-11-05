@@ -62,7 +62,7 @@ def patch_bot_source(source: str) -> str:
     source = _replace_once(
         source,
         '        description="Higher scan quota and extended scan history for 30 days.",',
-        '        description="30 days of Pro access. One-time purchase; does not auto-renew.",',
+        '        description="Up to 100 scans per day and 50 recent reports for 30 days. One-time purchase; no auto-renewal.",',
         "30-day invoice description",
     )
 
@@ -340,10 +340,40 @@ def patch_bot_source(source: str) -> str:
     if '@dp.message(Command("myid"))' not in source:
         source = _replace_once(source, '    @dp.message(Command("help"))\n', my_id_handler + '    @dp.message(Command("help"))\n', "help handler insertion")
 
+    plans_handler = '''    @dp.message(Command("plans"))
+    async def plans_command(message: Message) -> None:
+        lines = [
+            "AntiScam Guardian plans",
+            "",
+            "FREE — 5 scans per day; access to the 5 most recent reports.",
+            "PRO — up to 100 scans per day; access to the 50 most recent reports.",
+            "Pro is a one-time 30-day pass. It does not auto-renew.",
+            "In Telegram, Pro checkout uses Telegram Stars (XTR), not TON or USDT transfers.",
+        ]
+        billing_ready = (
+            settings.payments_mode == "telegram_stars"
+            and settings.stars_monthly_price > 0
+            and bool(settings.admin_telegram_ids)
+            and bool(os.getenv("SUPPORT_CONTACT", "").strip())
+        )
+        if billing_ready:
+            lines.extend(["", "To view the current Stars price, send /premium. Review the invoice before confirming."])
+        else:
+            lines.extend(["", "Pro checkout is disabled in this beta. No payment can be made."])
+        await message.answer("\\n".join(lines))
+'''
+    if '@dp.message(Command("plans"))' not in source:
+        source = _replace_once(
+            source,
+            '    @dp.message(Command("help"))\n',
+            plans_handler + '    @dp.message(Command("help"))\n',
+            "plans command insertion",
+        )
+
     source = _replace_once(
         source,
         'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport. TON Connect is read-only in this version.',
-        'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport, /myid. Payment administration: /charges, /refund, /refundsync, /refundrelease (operator only). TON Connect is read-only in this version.',
+        'Commands: /app, /scan, /wallet, /plans, /premium, /terms, /privacy, /paysupport, /myid. Payment administration: /charges, /refund, /refundsync, /refundrelease (operator only). TON Connect is read-only in this version.',
         "help command list",
     )
 
