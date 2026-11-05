@@ -9,7 +9,8 @@ OLD = '''            sys.executable, "-m", "uvicorn", "app.main:app",
             "--forwarded-allow-ips", "*",
 '''
 NEW = '''            sys.executable, "-m", "uvicorn", "app.main:app",
-            "--host", "0.0.0.0",  # nosec B104 - Railway ingress requires binding inside the container.
+            # Railway ingress requires binding to the container interface.
+            "--host", "0.0.0.0",  # nosec B104
             "--port", str(port),
 '''
 
