@@ -178,7 +178,7 @@ def send_telegram_document(token: str, chat_id: int, document_path: Path, captio
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
+        with urllib.request.urlopen(request, timeout=120) as response:  # nosec B310 - fixed https://api.telegram.org origin; only Bot API token is interpolated in the path.
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         # Never log the request URL: it contains the bot token.
