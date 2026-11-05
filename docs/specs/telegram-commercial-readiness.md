@@ -15,9 +15,16 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
 - The invoice describes 30 days, but the user-facing title does not clearly distinguish a one-off pass from recurring billing.
 - Pre-checkout validates amount, currency, payload, and terms acceptance.
 - Successful-payment updates grant the 30-day entitlement through the existing idempotent database operation.
-- Refund command is restricted to `ADMIN_TELEGRAM_IDS`, but the production environment currently has no configured admin ID.
-- `/paysupport` asks the buyer to provide receipt details to the bot but does not expose an operator support contact.
-- Real payments are currently disabled.
+- `ADMIN_TELEGRAM_IDS` and `SUPPORT_CONTACT` are now configured in Railway, and `/paysupport` was manually checked.
+- The live refund command is restricted to the configured operator, but it still needs a durable pending/refund-reconciliation state if Telegram accepts a refund and the local database write then fails.
+- The live payment mode remains disabled.
+
+## Verified deployment status (2026-11-05)
+- The production Railway service is currently attached to `commercial-readiness-026` and runs commit `40cbe06a`; it is online with a single bot polling process.
+- HTTPS, the `/data` persistent volume, `ADMIN_TELEGRAM_IDS`, and `SUPPORT_CONTACT` are configured. `/paysupport` returned the configured contact during a manual check.
+- Do not describe PR #3 as "not deployed"; the branch is deployed even though the PR is still open and unmerged.
+- Production billing remains disabled (`PAYMENTS_MODE=disabled`, `STARS_MONTHLY_PRICE=0`).
+- PR #4 (`payment-hardening-026`) is isolated from the production source branch and adds pending-refund reservation and admin reconciliation. It is a draft and is not deployed.
 
 ## Changes in scope
 1. Add a private-chat-only `/myid` command so the owner can retrieve their own numeric Telegram ID without involving a third-party bot.
@@ -29,6 +36,7 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
    - a non-empty `SUPPORT_CONTACT` is configured
    - the user has accepted the current terms.
 4. Make `/paysupport` display the configured support contact; when missing, clearly state that payments must remain disabled.
+7. Reserve a refund locally before the Telegram API call; distinguish pending, confirmed, and released states; require explicit admin confirmation for manual reconciliation; do not retry an uncertain refund blindly.
 5. Add tests for the archive-patching script and include it in Docker and CI.
 6. Document the Stars-only policy, the manual-renewal behavior, and the operator setup blockers.
 
@@ -41,7 +49,7 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
 ## Acceptance criteria
 - The patch script is deterministic and idempotent.
 - The patched bot source compiles.
-- Tests cover admin/support gating, one-time pass wording, private-only `/myid`, support-contact fallback, and idempotency.
+- Tests cover admin/support gating, one-time pass wording, private-only `/myid`, support-contact fallback, idempotency, pending refund reservation, duplicate refund prevention, and manual reconciliation guards.
 - CI applies the same bot patch before tests and the Docker image applies the same patch before runtime.
 - README and Persian launch docs state that Telegram Stars are the only permitted in-app checkout for this digital service.
 - Production payment variables remain unchanged and disabled.
