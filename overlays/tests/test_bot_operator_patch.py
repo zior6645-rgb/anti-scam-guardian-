@@ -160,6 +160,8 @@ class BotOperatorPatchTests(unittest.TestCase):
         patched = patch_bot_source(BOT_FIXTURE)
         self.assertIn('title="AntiScam Guardian Pro — 30-day pass"', patched)
         self.assertIn('description="30 days of Pro access. One-time purchase; does not auto-renew."', patched)
+        self.assertIn("Telegram Stars invoices intentionally use an empty provider token.", patched)
+        self.assertIn('provider_token="",  # nosec B106', patched)
 
     def test_myid_only_discloses_callers_own_id_in_private_chat(self):
         patched = patch_bot_source(BOT_FIXTURE)
