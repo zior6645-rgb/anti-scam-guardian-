@@ -1,0 +1,84 @@
+name: AntiScam Guardian dependency security audit
+
+on:
+  pull_request:
+    branches:
+      - commercial-readiness-026
+    paths:
+      - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
+      - "Dockerfile"
+      - ".github/workflows/security-audit.yml"
+  push:
+    branches:
+      - commercial-readiness-026
+    paths:
+      - "payload/release-0.2.4.tar.xz.b64.part*"
+      - "overlays/**"
+      - "Dockerfile"
+      - ".github/workflows/security-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-dependencies:
+    name: Audit Python dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct bundled application source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s payload/release-0.2.4.tar.xz.b64.part00
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          test -s release/anti-scam-guardian/requirements.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit Python dependency tree
+        working-directory: release/anti-scam-guardian
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit -r requirements.txt
+
+  javascript-dependencies:
+    name: Audit Mini App dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct bundled application source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s payload/release-0.2.4.tar.xz.b64.part00
+          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
+          mkdir release
+          tar -xJf release.tar.xz -C release
+          test -s release/anti-scam-guardian/web/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Audit Mini App dependency tree
+        working-directory: release/anti-scam-guardian/web
+        run: |
+          npm install --no-audit --no-fund
+          npm audit --audit-level=high
