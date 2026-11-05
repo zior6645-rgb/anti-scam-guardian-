@@ -64,6 +64,15 @@ jobs:
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
 
+
+      - name: Inspect production auth and database anchors (diagnostic only)
+        working-directory: release/anti-scam-guardian
+        run: |
+          echo "=== APP FILES ==="
+          find app -maxdepth 2 -type f -print | sort
+          echo "=== AUTH AND DATABASE SETTINGS ==="
+          grep -R -n -E 'ALLOW_DEV_AUTH|TELEGRAM_INITDATA_MAX_AGE_SECONDS|auth_date|initData|init_data|hmac|sqlite3.connect|DATABASE_PATH|backup|restore' app || true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
