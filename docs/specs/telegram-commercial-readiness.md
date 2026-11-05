@@ -14,7 +14,7 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
 - `/premium` uses a Stars invoice path behind environment gates.
 - The invoice describes 30 days, but the user-facing title does not clearly distinguish a one-off pass from recurring billing.
 - Pre-checkout validates amount, currency, payload, and terms acceptance.
-- Successful-payment updates grant the 30-day entitlement through the existing idempotent database operation.
+- A Telegram `successful_payment` update is the authoritative confirmation that the charge succeeded; the payment-hardening branch grants the 30-day entitlement idempotently for the known XTR product even if billing mode or price configuration changed after checkout, preventing a paid user from being stranded.
 - `ADMIN_TELEGRAM_IDS` and `SUPPORT_CONTACT` are now configured in Railway, and `/paysupport` was manually checked.
 - The live refund command is restricted to the configured operator, but it still needs a durable pending/refund-reconciliation state if Telegram accepts a refund and the local database write then fails.
 - The live payment mode remains disabled.
@@ -51,5 +51,6 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
 - The patched bot source compiles.
 - Tests cover admin/support gating, one-time pass wording, private-only `/myid`, support-contact fallback, idempotency, pending refund reservation, duplicate refund prevention, and manual reconciliation guards.
 - CI applies the same bot patch before tests and the Docker image applies the same patch before runtime.
+- Successful-payment delivery is tested against post-checkout billing configuration changes; only a positive XTR payment with the expected product payload and a charge ID can activate the idempotent entitlement.
 - README and Persian launch docs state that Telegram Stars are the only permitted in-app checkout for this digital service.
 - Production payment variables remain unchanged and disabled.
