@@ -54,6 +54,8 @@ jobs:
           cp overlays/app/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
           cp overlays/tests/test_bot_operator_patch.py release/anti-scam-guardian/tests/test_bot_operator_patch.py
           cp overlays/web/result-metadata.js release/anti-scam-guardian/web/src/result-metadata.js
+          cp overlays/web/wallet-policy-note.js release/anti-scam-guardian/web/src/wallet-policy-note.js
+          cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
           cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
 
 
@@ -98,6 +100,7 @@ jobs:
       - name: Build Mini App
         working-directory: release/anti-scam-guardian/web
         run: |
+          node --test ../tests/test_wallet_policy_note.mjs
           node apply-result-metadata.mjs
           npm install --no-audit --no-fund
           npm run build
