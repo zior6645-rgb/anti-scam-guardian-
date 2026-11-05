@@ -17,7 +17,14 @@ def _replace_once(source: str, old: str, new: str, label: str) -> str:
 def patch_bot_source(source: str) -> str:
     """Patch the archived bot with safe operator setup and explicit pass wording."""
     if "import os\n" not in source:
-        source = _replace_once(source, "import logging\n", "import logging\nimport os\n", "logging import")
+        source = _replace_once(
+        source,
+        "    activate_star_subscription,\n    get_star_charge,\n",
+        "    activate_star_subscription,\n    begin_star_refund,\n    cancel_star_refund,\n    get_star_charge,\n",
+        "refund coordination imports",
+    )
+
+    source = _replace_once(source, "import logging\n", "import logging\nimport os\n", "logging import")
 
     source = _replace_once(
         source,
@@ -61,6 +68,188 @@ def patch_bot_source(source: str) -> str:
         '            and query.invoice_payload',
         "pre-checkout operator preconditions",
     )
+
+
+    old_refund = '''    @dp.message(Command("refund"))
+    async def refund_payment(message: Message, bot: Bot) -> None:
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        parts = (message.text or "").split(maxsplit=1)
+        if len(parts) != 2:
+            await message.answer("Usage: /refund TELEGRAM_PAYMENT_CHARGE_ID")
+            return
+        charge_id = parts[1].strip()
+        charge = get_star_charge(charge_id)
+        if not charge:
+            await message.answer("Charge ID not found in this bot's payment records.")
+            return
+        if charge["refunded"]:
+            await message.answer("This charge is already recorded as refunded.")
+            return
+        if charge["currency"] != "XTR":
+            await message.answer("Only Telegram Stars charges can be refunded by this command.")
+            return
+        try:
+            await bot.refund_star_payment(user_id=charge["telegram_id"], telegram_payment_charge_id=charge_id)
+            record_star_refund(charge_id)
+            await message.answer("Telegram accepted the refund request. Verify its status in the bot's payment records.")
+        except Exception:
+            logger.exception("Telegram Stars refund failed")
+            await message.answer("Refund request failed. Check the charge ID and Telegram Bot API status, then retry or contact support.")'''
+    new_refund = '''    @dp.message(Command("refund"))
+    async def refund_payment(message: Message, bot: Bot) -> None:
+        if message.chat.type != "private":
+            await message.answer("Run refund administration commands in a private chat with this bot.")
+            return
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        parts = (message.text or "").split(maxsplit=1)
+        if len(parts) != 2:
+            await message.answer("Usage: /refund TELEGRAM_PAYMENT_CHARGE_ID")
+            return
+        charge_id = parts[1].strip()
+        charge = get_star_charge(charge_id)
+        if not charge:
+            await message.answer("Charge ID not found in this bot's payment records.")
+            return
+        if charge["refunded"]:
+            await message.answer("This charge is already recorded as refunded.")
+            return
+        if charge["refund_pending"]:
+            await message.answer("A refund attempt is already pending reconciliation. Do not repeat /refund.")
+            return
+        if charge["currency"] != "XTR":
+            await message.answer("Only Telegram Stars charges can be refunded by this command.")
+            return
+        if not begin_star_refund(charge_id):
+            latest = get_star_charge(charge_id)
+            if latest and latest["refunded"]:
+                await message.answer("This charge is already recorded as refunded.")
+            elif latest and latest["refund_pending"]:
+                await message.answer("A refund attempt is already pending reconciliation. Do not repeat /refund.")
+            else:
+                await message.answer("Could not reserve this refund. No Telegram refund request was sent.")
+            return
+        try:
+            accepted = await bot.refund_star_payment(
+                user_id=charge["telegram_id"],
+                telegram_payment_charge_id=charge_id,
+            )
+        except Exception:
+            logger.exception("Telegram Stars refund outcome is uncertain; pending marker retained")
+            await message.answer(
+                "Telegram's refund result could not be confirmed. This charge is locked to prevent a duplicate refund. "
+                "Check the Telegram payment status, then use /refundsync CHARGE_ID CONFIRMED_REFUNDED "
+                "or /refundrelease CHARGE_ID CONFIRMED_NOT_REFUNDED. Do not retry /refund blindly."
+            )
+            return
+        if not accepted:
+            logger.error("Telegram did not confirm Stars refund for charge %s; pending marker retained", charge_id)
+            await message.answer(
+                "Telegram did not confirm the refund. The charge remains locked for review. "
+                "Use /refundrelease only after verifying that no refund occurred."
+            )
+            return
+        try:
+            recorded = record_star_refund(charge_id)
+        except Exception:
+            logger.critical(
+                "Telegram accepted Stars refund but local entitlement reconciliation failed for charge %s",
+                charge_id,
+                exc_info=True,
+            )
+            await message.answer(
+                "Telegram accepted the refund, but the local Pro access record could not be synchronized. "
+                "The charge is locked against duplicate refunds. Verify the Telegram refund, then use "
+                "/refundsync CHARGE_ID CONFIRMED_REFUNDED. Do not repeat /refund."
+            )
+            return
+        if not recorded:
+            logger.critical("Telegram accepted Stars refund but local refund record was not completed for charge %s", charge_id)
+            await message.answer(
+                "Telegram accepted the refund, but the local refund record remains unresolved. "
+                "Verify the Telegram refund, then use /refundsync CHARGE_ID CONFIRMED_REFUNDED."
+            )
+            return
+        await message.answer("Telegram accepted the refund and the local Pro access period was reconciled.")
+
+    @dp.message(Command("refundsync"))
+    async def refund_sync(message: Message) -> None:
+        if message.chat.type != "private":
+            await message.answer("Run refund administration commands in a private chat with this bot.")
+            return
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        parts = (message.text or "").split(maxsplit=2)
+        if len(parts) != 3 or parts[2] != "CONFIRMED_REFUNDED":
+            await message.answer("Usage: /refundsync TELEGRAM_PAYMENT_CHARGE_ID CONFIRMED_REFUNDED")
+            return
+        charge_id = parts[1].strip()
+        charge = get_star_charge(charge_id)
+        if not charge:
+            await message.answer("Charge ID not found in this bot's payment records.")
+            return
+        if charge["refunded"]:
+            await message.answer("The local record already shows this charge as refunded.")
+            return
+        if not charge["refund_pending"]:
+            await message.answer("There is no pending refund to synchronize.")
+            return
+        try:
+            recorded = record_star_refund(charge_id)
+        except Exception:
+            logger.exception("Manual Stars refund reconciliation failed for charge %s", charge_id)
+            await message.answer("The local record could not be synchronized. Keep the charge pending and escalate it.")
+            return
+        if not recorded:
+            await message.answer("The pending refund could not be synchronized. Keep the charge pending and escalate it.")
+            return
+        await message.answer(
+            "The local Pro access and refund record are synchronized. This command does not issue a Telegram refund; "
+            "use it only after independently confirming Telegram accepted the refund."
+        )
+
+    @dp.message(Command("refundrelease"))
+    async def refund_release(message: Message) -> None:
+        if message.chat.type != "private":
+            await message.answer("Run refund administration commands in a private chat with this bot.")
+            return
+        if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:
+            await message.answer("This command is restricted to the configured bot operator.")
+            return
+        parts = (message.text or "").split(maxsplit=2)
+        if len(parts) != 3 or parts[2] != "CONFIRMED_NOT_REFUNDED":
+            await message.answer("Usage: /refundrelease TELEGRAM_PAYMENT_CHARGE_ID CONFIRMED_NOT_REFUNDED")
+            return
+        charge_id = parts[1].strip()
+        charge = get_star_charge(charge_id)
+        if not charge:
+            await message.answer("Charge ID not found in this bot's payment records.")
+            return
+        if charge["refunded"]:
+            await message.answer("This charge is already recorded as refunded and cannot be released.")
+            return
+        if not charge["refund_pending"]:
+            await message.answer("There is no pending refund to release.")
+            return
+        try:
+            released = cancel_star_refund(charge_id)
+        except Exception:
+            logger.exception("Pending Stars refund release failed for charge %s", charge_id)
+            await message.answer("The pending refund could not be released. Keep it locked and escalate it.")
+            return
+        if not released:
+            await message.answer("The pending refund could not be released. Recheck the charge before retrying.")
+            return
+        await message.answer(
+            "The local pending marker was released. This command does not cancel or issue a Telegram refund; "
+            "use it only after independently confirming Telegram did not refund this charge."
+        )
+'''
+    source = _replace_once(source, old_refund, new_refund, "refund lifecycle handler")
 
     old_support = '''    @dp.message(Command("paysupport", "support"))
     async def pay_support(message: Message) -> None:
@@ -107,7 +296,7 @@ def patch_bot_source(source: str) -> str:
     source = _replace_once(
         source,
         'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport. TON Connect is read-only in this version.',
-        'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport, /myid. TON Connect is read-only in this version.',
+        'Commands: /app, /scan, /wallet, /premium, /terms, /privacy, /paysupport, /myid. Refund administration: /refund, /refundsync, /refundrelease (operator only). TON Connect is read-only in this version.',
         "help command list",
     )
 
