@@ -154,6 +154,7 @@ class BotOperatorPatchTests(unittest.TestCase):
         self.assertIn('payment.invoice_payload == "antiscam:pro:monthly:v1"', guard)
         self.assertIn("payment.total_amount > 0", guard)
         self.assertIn("bool(payment.telegram_payment_charge_id)", guard)
+        self.assertIn("activate_star_subscription(", handler)
 
     def test_pro_invoice_is_described_as_one_time_30_day_pass(self):
         patched = patch_bot_source(BOT_FIXTURE)
