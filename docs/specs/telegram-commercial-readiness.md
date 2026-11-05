@@ -24,7 +24,7 @@ Prepare AntiScam Guardian to sell its existing 30-day Pro access through the pay
 - HTTPS, the `/data` persistent volume, `ADMIN_TELEGRAM_IDS`, and `SUPPORT_CONTACT` are configured. `/paysupport` returned the configured contact during a manual check.
 - Do not describe PR #3 as "not deployed"; the branch is deployed even though the PR is still open and unmerged.
 - Production billing remains disabled (`PAYMENTS_MODE=disabled`, `STARS_MONTHLY_PRICE=0`).
-- PR #4 (`payment-hardening-026`) is isolated from the production source branch and adds pending-refund reservation and admin reconciliation. It is a draft and is not deployed.
+- PR #4 (`payment-hardening-026`) has been merged and deployed to the production source branch as commit `8b6071b6`; it adds pending-refund reservation and admin reconciliation. Production billing remains disabled pending end-to-end test-environment validation.
 
 ## Changes in scope
 1. Add a private-chat-only `/myid` command so the owner can retrieve their own numeric Telegram ID without involving a third-party bot.
