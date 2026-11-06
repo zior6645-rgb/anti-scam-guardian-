@@ -8,9 +8,12 @@ on:
       - commercial-readiness-026
       - payment-hardening-026
       - test/telegram-stars-payment-guards-2026-11-05
+      - product/market-ready-20261105
+      - work/commercial-completion
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
+      - "scripts/**"
       - "Dockerfile"
       - "railway.json"
       - "README.md"
@@ -21,9 +24,11 @@ on:
     branches:
       - main
       - commercial-readiness-026
+      - product/market-ready-20261105
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
+      - "scripts/**"
       - "Dockerfile"
       - "railway.json"
       - "README.md"
@@ -42,39 +47,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Verify and reconstruct source archive
-        run: |
-          set -eu
-          test -s payload/release-0.2.4.tar.xz.b64.part00
-          cat payload/release-0.2.4.tar.xz.b64.part* | base64 -d > release.tar.xz
-          mkdir release
-          tar -xJf release.tar.xz -C release
-          test -f release/anti-scam-guardian/app/runtime.py
-          test -f release/anti-scam-guardian/app/main.py
-          cp overlays/app/scanner.py release/anti-scam-guardian/app/scanner.py
-          cp overlays/app/backup_supervisor.py release/anti-scam-guardian/app/backup_supervisor.py
-          cp overlays/app/restore_backup.py release/anti-scam-guardian/app/restore_backup.py
-          cp overlays/tests/test_backup_supervisor.py release/anti-scam-guardian/tests/test_backup_supervisor.py
-          cp overlays/tests/test_scanner_release.py release/anti-scam-guardian/tests/test_scanner_release.py
-          cp overlays/tests/test_database_refund.py release/anti-scam-guardian/tests/test_database_refund.py
-          cp overlays/app/apply-database-refund-patch.py release/anti-scam-guardian/apply-database-refund-patch.py
-          cp overlays/app/apply_bot_operator_patch.py release/anti-scam-guardian/apply_bot_operator_patch.py
-          cp overlays/app/runtime_security_patch.py release/anti-scam-guardian/app/runtime_security_patch.py
-          cp overlays/tests/test_runtime_security_patch.py release/anti-scam-guardian/tests/test_runtime_security_patch.py
-          cp overlays/tests/test_bot_operator_patch.py release/anti-scam-guardian/tests/test_bot_operator_patch.py
-          cp overlays/tests/test_payment_protocol.py release/anti-scam-guardian/tests/test_payment_protocol.py
-          cp overlays/tests/test_telegram_auth_release.py release/anti-scam-guardian/tests/test_telegram_auth_release.py
-          cp overlays/web/result-metadata.js release/anti-scam-guardian/web/src/result-metadata.js
-          cp overlays/web/wallet-policy-note.js release/anti-scam-guardian/web/src/wallet-policy-note.js
-          cp overlays/tests/test_wallet_policy_note.mjs release/anti-scam-guardian/tests/test_wallet_policy_note.mjs
-          cp overlays/web/apply-result-metadata.mjs release/anti-scam-guardian/web/apply-result-metadata.mjs
-          cp overlays/web/patch-deepmerge-security.mjs release/anti-scam-guardian/web/patch-deepmerge-security.mjs
-          cp overlays/web/test-deepmerge-security.mjs release/anti-scam-guardian/web/test-deepmerge-security.mjs
-
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Reconstruct and patch release sources
+        run: python scripts/reconstruct.py release
 
       - name: Install backend dependencies
         working-directory: release/anti-scam-guardian
@@ -86,10 +65,7 @@ jobs:
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
-          python apply-database-refund-patch.py app/database.py
-          python apply_bot_operator_patch.py app/bot.py
-          python -m app.runtime_security_patch app/runtime.py
-          python -m compileall -q app tests apply_bot_operator_patch.py
+          python -m compileall -q app tests apply_bot_operator_patch.py apply_product_limits_patch.py
           python -m unittest discover -s tests -v
 
       - name: Set up Node
@@ -100,7 +76,7 @@ jobs:
       - name: Build Mini App
         working-directory: release/anti-scam-guardian/web
         run: |
-          node --test ../tests/test_wallet_policy_note.mjs
+          node --test ../tests/*.mjs
           npm install --no-audit --no-fund
           node patch-deepmerge-security.mjs
           node test-deepmerge-security.mjs
