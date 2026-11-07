@@ -99,6 +99,15 @@ def patch_bot_source(source: str) -> str:
     )
 
 
+
+    source = _replace_once(
+        source,
+        'await message.answer("This payment was already processed. Your previous Pro entitlement remains active.")',
+        'await message.answer("This payment was already processed; no additional access was added. "\n'
+        '                                     "Check your current plan in the Mini App. For an expired or refunded payment, use /paysupport.")',
+        "accurate duplicate payment receipt",
+    )
+
     old_refund = '''    @dp.message(Command("refund"))
     async def refund_payment(message: Message, bot: Bot) -> None:
         if not message.from_user or message.from_user.id not in settings.admin_telegram_ids:

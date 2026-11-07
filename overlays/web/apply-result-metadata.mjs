@@ -37,6 +37,41 @@ if (!main.includes(appendCall)) {
   }
   main = main.replace(appendAnchor, appendAnchor + "\n" + appendCall);
 }
+
+const quotaImport = "import { formatQuota } from './quota-status.js';";
+if (!main.includes(quotaImport)) {
+  if (!main.includes(importAnchor)) throw new Error('Missing quota import anchor');
+  main = main.replace(importAnchor, importAnchor + '\n' + quotaImport);
+}
+for (const [old, replacement] of [
+  ["quota.textContent = data.premium ? 'Pro active' : `${data.scans_used_today}/${data.free_scans_per_day} free scans today`;",
+    'quota.textContent = formatQuota(data);'],
+  ["quota.textContent = payload.usage.premium ? 'Pro active' : `${payload.usage.used_today}/${payload.usage.free_limit} free scans today`;",
+    'quota.textContent = formatQuota(payload.usage);'],
+]) {
+  if (main.includes(replacement)) continue;
+  if (main.split(old).length !== 2) throw new Error('Missing or ambiguous quota display anchor');
+  main = main.replace(old, replacement);
+}
+const reportImport = "import { appendReportDownload } from './report-export.js';";
+if (!main.includes(reportImport)) main = main.replace(importAnchor, importAnchor + '\n' + reportImport);
+for (const [old, replacement] of [
+  ['function renderResult(data) {', "function renderResult(data, scannedAt = '') {"],
+  ['  appendResultMetadata(resultBox, result);', '  appendResultMetadata(resultBox, result);\n  appendReportDownload(resultBox, result, scannedAt);'],
+  ['    card.append(heading, subject, time);', `    const view = document.createElement('button');
+    view.type = 'button';
+    view.textContent = 'View full report';
+    view.addEventListener('click', () => {
+      renderResult({ result: entry.result || {} }, entry.created_at || '');
+      resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    card.append(heading, subject, time, view);`],
+]) {
+  if (main.includes(replacement)) continue;
+  if (main.split(old).length !== 2) throw new Error('Missing or ambiguous report export anchor');
+  main = main.replace(old, replacement);
+}
+
 await writeFile(mainPath, main);
 
 const css = await readFile(cssPath, "utf8");

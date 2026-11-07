@@ -19,6 +19,9 @@ on:
       - "railway.json"
       - "README.md"
       - "RAILWAY-DEPLOY-fa.md"
+      - "CUSTOMER-READINESS.md"
+      - "REBUILD.md"
+      - "PAYMENT-TEST-REPORT-fa.md"
       - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
   pull_request:
@@ -34,6 +37,9 @@ on:
       - "railway.json"
       - "README.md"
       - "RAILWAY-DEPLOY-fa.md"
+      - "CUSTOMER-READINESS.md"
+      - "REBUILD.md"
+      - "PAYMENT-TEST-REPORT-fa.md"
       - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
   workflow_dispatch:
