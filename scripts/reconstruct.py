@@ -46,6 +46,31 @@ def reconstruct(output: Path) -> Path:
     ]
     for args in commands:
         subprocess.run([sys.executable, *args], cwd=source, check=True)
+
+    # Every production Python patcher must be safe to reapply. Compare the
+    # assembled outputs byte-for-byte after a second pass so accidental
+    # non-idempotent transformations fail reconstruction and CI.
+    patched_paths = [
+        source / "app" / "database.py",
+        source / "app" / "bot.py",
+        source / "app" / "config.py",
+        source / "app" / "main.py",
+        source / "app" / "runtime.py",
+    ]
+    first_pass = {path: path.read_bytes() for path in patched_paths}
+    for args in commands:
+        subprocess.run([sys.executable, *args], cwd=source, check=True)
+    changed = [
+        str(path.relative_to(source))
+        for path in patched_paths
+        if path.read_bytes() != first_pass[path]
+    ]
+    if changed:
+        raise RuntimeError(
+            "Production patchers are not idempotent; second pass changed: "
+            + ", ".join(changed)
+        )
+    print("All production Python patchers are idempotent.")
     print(f"Release source ready: {source}")
     return source
 

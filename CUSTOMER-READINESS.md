@@ -21,6 +21,7 @@ This branch contains customer-readiness work only. It has not been deployed to R
 - Kept the `release/customer-readiness` push trigger. The release verification workflow builds and tests only; it has no Railway deploy step.
 - Added this branch to the dependency/security audit workflow.
 - Added a second execution of the result-metadata frontend patcher in both CI and Docker builds to verify repeat application.
+- Release reconstruction runs every production Python patcher twice and fails if the second pass changes any patched source file.
 
 ## Release verification results
 
