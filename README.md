@@ -11,6 +11,8 @@ Telegram-first TON security assistant. This repository contains a release candid
 - TON Jetton master metadata through TonAPI, including name, symbol, decimals, supply, mintability, holder count, and provider verification classification.
 - The Mini App displays available public account and Jetton metadata. Metadata fields are treated as untrusted display strings and inserted through DOM text nodes.
 - Per-user daily quota, recent scan history, Telegram Mini App `initData` authentication, and a persistent SQLite database.
+- The Mini App displays plan-specific daily quota and remaining scans; the server enforces separate Free and Pro limits.
+- Scan history can reopen the full stored report, with a local plain-text export that includes evidence, limitations, and privacy cautions.
 - Docker image build and CI verification for the same source archive and reviewed overlays.
 
 ## What a scan does not do

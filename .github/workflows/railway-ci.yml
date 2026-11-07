@@ -24,6 +24,7 @@ on:
       - "PAYMENT-TEST-REPORT-fa.md"
       - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
+      - ".github/workflows/security-audit.yml"
   pull_request:
     branches:
       - main
@@ -42,6 +43,7 @@ on:
       - "PAYMENT-TEST-REPORT-fa.md"
       - "PRELAUNCH-CHECKLIST-fa.md"
       - ".github/workflows/railway-ci.yml"
+      - ".github/workflows/security-audit.yml"
   workflow_dispatch:
 
 permissions:
@@ -87,6 +89,7 @@ jobs:
           npm install --no-audit --no-fund
           node patch-deepmerge-security.mjs
           node test-deepmerge-security.mjs
+          node apply-result-metadata.mjs
           node apply-result-metadata.mjs
           npm run build
           test -f ../app/static/index.html

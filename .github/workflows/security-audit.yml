@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - commercial-readiness-026
+      - release/customer-readiness
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
@@ -14,6 +15,7 @@ on:
     branches:
       - main
       - commercial-readiness-026
+      - release/customer-readiness
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
