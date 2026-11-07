@@ -41,16 +41,16 @@ class ProductQuotaApiTests(unittest.TestCase):
         account = self.client.get("/api/me").json()
         self.assertEqual(account["free_scans_per_day"], 2)
         self.assertEqual(account["pro_scans_per_day"], 3)
-        self.assertFalse(account["pro_checkout_enabled")
+        self.assertFalse(account["pro_checkout_enabled"])
         for expected in [1, 2]:
             response = self.scan()
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["usage"]["scans_used_today"], expected)
-            self.assertEqual(self.scan().status_code, 402)
-            self.assertEqual(self.scanner.await_count, 2)
-            self.assertEqual(self.client.get("/api/me").json()["scans_used_today"], 2)
+            self.assertEqual(response.json()["usage"]["used_today"], expected)
+        self.assertEqual(self.scan().status_code, 402)
+        self.assertEqual(self.scanner.await_count, 2)
+        self.assertEqual(self.client.get("/api/me").json()["scans_used_today"], 2)
 
-    def test_paid_activation_duplicate_delivery_and_refund_change_access<self):
+    def test_paid_activation_duplicate_delivery_and_refund_change_access(self):
         self.assertTrue(database.activate_star_subscription("test-charge", 0, 100, "XTR", 30))
         self.assertFalse(database.activate_star_subscription("test-charge", 0, 100, "XTR", 30))
         self.assertTrue(self.client.get("/api/me").json()["premium"])
@@ -61,8 +61,8 @@ class ProductQuotaApiTests(unittest.TestCase):
         blocked = self.scan()
         self.assertEqual(blocked.status_code, 402)
         self.assertIn("Daily Pro", blocked.json()["detail"])
-        self.assertTrue(database.begin_star_refund("test-charge")
-        self.assertTrue(database.record_star_refund('test-charge'))
+        self.assertTrue(database.begin_star_refund("test-charge"))
+        self.assertTrue(database.record_star_refund("test-charge"))
         self.assertFalse(self.client.get("/api/me").json()["premium"])
         self.assertIn("Daily free", self.scan().json()["detail"])
 
