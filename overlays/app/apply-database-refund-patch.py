@@ -97,9 +97,14 @@ if old_premium_lookup in source:
 elif new_premium_lookup not in source:
     raise SystemExit("Could not find premium entitlement lookup")
 
-refund_start = source.find("def record_star_refund(charge_id: str) -> bool:")
+# Replace the whole helper block on every pass. On a second pass the
+# begin/cancel helpers are already present before record_star_refund.
+refund_start = source.find("def begin_star_refund(charge_id: str) -> bool:")
 if refund_start < 0:
-    raise SystemExit("Could not find record_star_refund")
+    # Original archive contains only record_star_refund; this is the first pass.
+    refund_start = source.find("def record_star_refund(charge_id: str) -> bool:")
+if refund_start < 0:
+    raise SystemExit("Could not find the Stars refund helper block")
 
 refund_function = '''def begin_star_refund(charge_id: str) -> bool:
     """Atomically reserve a refund before calling Telegram, preventing duplicate attempts."""
