@@ -9,7 +9,8 @@ on:
       - payment-hardening-026
       - test/telegram-stars-payment-guards-2026-11-05
       - product/market-ready-20261105
-      - work/commercial-completion
+      - release/customer-readiness
+
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
