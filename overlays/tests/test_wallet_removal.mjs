@@ -15,6 +15,11 @@ test("TON Connect bootstrap, button, status and SDK dependency are removed", () 
   const output = removeWalletConnectSources(input);
   assert.doesNotMatch(output.main, /TonConnectUI|walletStatus|tonconnect-manifest|wallet-policy-note/i);
   assert.doesNotMatch(output.html, /ton-connect|wallet-status|connect wallet/i);
+  assert.match(output.html, /<style id="asg-inline-theme">/);
+  assert.match(output.html, /\.shell\s*\{/);
+  assert.match(output.html, /\.panel\s*\{/);
+  assert.match(output.html, /\.brand-mark\s*\{/);
+  assert.match(output.html, /background:\s*radial-gradient/);
   assert.doesNotMatch(output.css, /#ton-connect|wallet-policy-note/i);
   assert.equal(JSON.parse(output.packageJson).dependencies?.["@tonconnect/ui"], undefined);
 });
