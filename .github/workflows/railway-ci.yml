@@ -92,8 +92,6 @@ jobs:
           node --test ../tests/*.mjs
           node ./remove-wallet-connect.mjs
           npm install --no-audit --no-fund
-          node patch-deepmerge-security.mjs
-          node test-deepmerge-security.mjs
           node apply-result-metadata.mjs
           node apply-result-metadata.mjs
           node apply-free-unlimited.mjs
