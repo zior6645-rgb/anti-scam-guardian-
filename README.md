@@ -9,6 +9,7 @@ A free Telegram-first security screening assistant for suspicious URLs, TON wall
 - Scan history has no Free/Pro split or application-imposed item cap.
 - There are no Pro plans, paid features, invoices, subscriptions, checkout flows or in-bot payment handlers.
 - The Mini App displays a single “Free plan · unlimited scans” status.
+- Wallet and token scans use manually entered public addresses. The Mini App does not include wallet connection or transaction approval.
 
 “Unlimited” means this application does not block a user after a fixed number of scans or history items. It does not mean external providers, Telegram, Railway, network capacity or hosting costs are unlimited. Provider rate limits, temporary outages, abuse protection and infrastructure capacity may affect service availability.
 
@@ -33,7 +34,7 @@ A free Telegram-first security screening assistant for suspicious URLs, TON wall
 
 See the Persian [Railway deployment guide](./RAILWAY-DEPLOY-fa.md).
 
-The Docker image reconstructs the pinned source archive and applies the free/unlimited product patches before building the Mini App and runtime. The release workflow verifies source reconstruction, backend tests, JavaScript tests, frontend build and Docker build.
+The Docker image reconstructs the pinned source archive and applies the free/unlimited and wallet-free product patches before building the Mini App and runtime. The release workflow verifies source reconstruction, backend tests, JavaScript tests, frontend build and Docker build.
 
 Required runtime configuration includes BOT_TOKEN, BOT_USERNAME, ENVIRONMENT=production, ALLOW_DEV_AUTH=false, DATABASE_PATH=/data/guardian.sqlite3 and TELEGRAM_INITDATA_MAX_AGE_SECONDS=600. The bot also needs ADMIN_TELEGRAM_IDS and BACKUP_ENCRYPTION_KEY for encrypted backups.
 
