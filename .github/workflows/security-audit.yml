@@ -80,8 +80,6 @@ jobs:
           test -s release/anti-scam-guardian/web/package.json
           cp overlays/web/wallet-removal.js release/anti-scam-guardian/web/src/wallet-removal.js
           cp overlays/web/remove-wallet-connect.mjs release/anti-scam-guardian/web/remove-wallet-connect.mjs
-          cp overlays/web/patch-deepmerge-security.mjs release/anti-scam-guardian/web/patch-deepmerge-security.mjs
-          cp overlays/web/test-deepmerge-security.mjs release/anti-scam-guardian/web/test-deepmerge-security.mjs
           cd release/anti-scam-guardian/web
           node remove-wallet-connect.mjs
 
@@ -94,8 +92,6 @@ jobs:
         working-directory: release/anti-scam-guardian/web
         run: |
           npm install --no-audit --no-fund
-          node patch-deepmerge-security.mjs
-          node test-deepmerge-security.mjs
           if npm ls --all @tonconnect/ui; then
             echo "TON Connect SDK is still installed" >&2
             exit 1
