@@ -34,7 +34,7 @@ def reconstruct(output: Path) -> Path:
     if legacy_api_test.is_file():
         legacy = legacy_api_test.read_text(encoding="utf-8")
         obsolete = re.compile(
-            r"(?ms)^    def test_tonconnect_manifest_requires_configured_https_origin\\(self\\):\\n.*?(?=^    def |\\Z)"
+            r"(?ms)^    def test_tonconnect_manifest_requires_configured_https_origin\(self\):\n.*?(?=^    def |\Z)"
         )
         legacy, removed = obsolete.subn("", legacy, count=1)
         if removed != 1:
