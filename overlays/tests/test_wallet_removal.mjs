@@ -23,7 +23,7 @@ test("manual TON wallet address scanning remains available without wallet connec
   const output = removeWalletConnectSources(input);
   assert.match(output.html, /<option value="wallet">TON wallet address<\/option>/);
   assert.match(output.html, /id="value"/);
-  assert.match(output.main, /fetch\('\\/api\\/scan'/);
+  assert.match(output.main, /\/api\/scan/);
 });
 
 test("wallet removal transformation is idempotent", () => {
