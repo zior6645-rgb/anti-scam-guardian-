@@ -21,15 +21,15 @@ export function removeWalletConnectSources({ main, html, css, packageJson }) {
   // hashed CSS asset has already been replaced by a new deployment. Embed
   // the exact production stylesheet in the document so the theme cannot
   // disappear when that external asset is stale or unavailable.
-  const inlineTheme = `<style id="asg-inline-theme">\\n${nextCss}\\n</style>`;
+  const inlineTheme = `<style id="asg-inline-theme">\n${nextCss}\n</style>`;
   if (nextHtml.includes('<style id="asg-inline-theme">')) {
     nextHtml = nextHtml.replace(
-      /<style id="asg-inline-theme">[\\s\\S]*?<\\/style>/,
+      /<style id="asg-inline-theme">[\s\S]*?<\/style>/,
       inlineTheme,
     );
   } else {
     if (!nextHtml.includes("</head>")) throw new Error("Could not locate the Mini App document head");
-    nextHtml = nextHtml.replace("</head>", inlineTheme + "\\n</head>");
+    nextHtml = nextHtml.replace("</head>", inlineTheme + "\n</head>");
   }
 
   const parsedPackage = JSON.parse(packageJson);
