@@ -79,9 +79,9 @@ def patch_config(source: str) -> str:
             raise RuntimeError("Could not uniquely locate WEBAPP_URL for Telegram WebView cache busting")
         source = source.replace(
             webapp_line,
-            webapp_line + '\\n'
-            '    if webapp_url:\\n'
-            '        cache_separator = "&" if "?" in webapp_url else "?"\\n'
+            webapp_line + '\n'
+            '    if webapp_url:\n'
+            '        cache_separator = "&" if "?" in webapp_url else "?"\n'
             f'        webapp_url = f"{{webapp_url}}{{cache_separator}}v={cache_version}"',
             1,
         )
