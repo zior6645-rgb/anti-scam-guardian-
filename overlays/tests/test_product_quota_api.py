@@ -1,4 +1,3 @@
-"""Exercise assembled API + database, with only external scanning mocked."""
 import os
 import tempfile
 import unittest
@@ -6,28 +5,31 @@ from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
-from app import database
 import app.main as main
 
 
-class ProductQuotaApiTests(unittest.TestCase):
+class FreeUnlimitedApiTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.env = patch.dict(os.environ, {
-            "DATABASE_PATH": os.path.join(self.temp.name, "quota-api.sqlite3"),
+        env = patch.dict(os.environ, {
+            "DATABASE_PATH": os.path.join(self.temp.name, "unlimited-api.sqlite3"),
             "ENVIRONMENT": "development",
         })
-        self.env.start()
-        self.addCleanup(self.env.stop)
+        env.start()
+        self.addCleanup(env.stop)
         config = patch.object(main, "settings", replace(
-            main.settings, environment="development", allow_dev_auth=True,
-            free_scans_per_day=2, pro_scans_per_day=3, payments_mode="disabled",
+            main.settings,
+            environment="development",
+            allow_dev_auth=True,
+            free_scans_per_day=0,
         ))
         config.start()
         self.addCleanup(config.stop)
         scanner = patch.object(main, "scan_url", AsyncMock(return_value={
-            "risk_level": "no_obvious_flags", "flags": [], "subject": "example.com",
+            "risk_level": "no_obvious_flags",
+            "flags": [],
+            "subject": "example.com",
         }))
         self.scanner = scanner.start()
         self.addCleanup(scanner.stop)
@@ -35,48 +37,53 @@ class ProductQuotaApiTests(unittest.TestCase):
         self.client.get("/api/me")
 
     def scan(self):
-        return self.client.post("/api/scan", json={"kind": "url", "value": "https://example.com"})
+        return self.client.post("/api/scan", json={
+            "kind": "url",
+            "value": "https://example.com",
+        })
 
-    def test_free_quota_matches_account_and_blocks_before_calling_provider(self):
+    def test_account_and_scan_endpoints_are_free_and_unlimited(self):
         account = self.client.get("/api/me").json()
-        self.assertEqual(account["free_scans_per_day"], 2)
-        self.assertEqual(account["pro_scans_per_day"], 3)
-        self.assertFalse(account["pro_checkout_enabled"])
-        for expected in [1, 2]:
+        self.assertFalse(account["premium"])
+        self.assertEqual(account["free_scans_per_day"], 0)
+        self.assertTrue(account["unlimited_scans"])
+        self.assertNotIn("payments_mode", account)
+
+        for index in range(12):
             response = self.scan()
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["usage"]["used_today"], expected)
-        self.assertEqual(self.scan().status_code, 402)
-        self.assertEqual(self.scanner.await_count, 2)
-        self.assertEqual(self.client.get("/api/me").json()["scans_used_today"], 2)
+            usage = response.json()["usage"]
+            self.assertFalse(usage["premium"])
+            self.assertEqual(usage["free_limit"], 0)
+            self.assertTrue(usage["unlimited"])
 
-    def test_paid_activation_duplicate_delivery_and_refund_change_access(self):
-        self.assertTrue(database.activate_star_subscription("test-charge", 0, 100, "XTR", 30))
-        self.assertFalse(database.activate_star_subscription("test-charge", 0, 100, "XTR", 30))
-        self.assertTrue(self.client.get("/api/me").json()["premium"])
-        for _ in range(3):
-            response = self.scan()
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["usage"]["pro_limit"], 3)
-        blocked = self.scan()
-        self.assertEqual(blocked.status_code, 402)
-        self.assertIn("Daily Pro", blocked.json()["detail"])
-        self.assertTrue(database.begin_star_refund("test-charge"))
-        self.assertTrue(database.record_star_refund("test-charge"))
-        self.assertFalse(self.client.get("/api/me").json()["premium"])
-        self.assertIn("Daily free", self.scan().json()["detail"])
+        self.assertEqual(self.scanner.await_count, 12)
 
-    def test_provider_failure_returns_quota_and_does_not_leak_exception(self):
+    def test_history_endpoint_returns_more_than_the_old_free_limit(self):
+        for _ in range(8):
+            self.assertEqual(self.scan().status_code, 200)
+        history = self.client.get("/api/history").json()
+        self.assertTrue(history["unlimited"])
+        self.assertFalse(history["premium"])
+        self.assertEqual(len(history["items"]), 8)
+
+    def test_provider_failure_does_not_consume_a_scan(self):
         self.scanner.side_effect = RuntimeError("private provider error")
         response = self.scan()
         self.assertEqual(response.status_code, 502)
         self.assertNotIn("private provider", response.text)
-        self.assertEqual(self.client.get("/api/me").json()["scans_used_today"], 0)
+
         self.scanner.side_effect = None
         self.assertEqual(self.scan().status_code, 200)
 
-    def test_invalid_input_does_not_consume_quota(self):
-        response = self.client.post("/api/scan", json={"kind": "url", "value": "javascript:alert(1)"})
+    def test_invalid_input_does_not_call_provider(self):
+        response = self.client.post("/api/scan", json={
+            "kind": "url",
+            "value": "javascript:alert(1)",
+        })
         self.assertEqual(response.status_code, 422)
-        self.scanner.assert_not_awaited()
-        self.assertEqual(self.client.get("/api/me").json()["scans_used_today"], 0)
+        self.assertEqual(self.scanner.await_count, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
