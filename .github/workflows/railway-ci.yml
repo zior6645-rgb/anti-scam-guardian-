@@ -11,7 +11,6 @@ on:
       - product/market-ready-20261105
       - release/customer-readiness
       - free-unlimited-20261122
-
     paths:
       - "payload/release-0.2.4.tar.xz.b64.part*"
       - "overlays/**"
@@ -74,8 +73,13 @@ jobs:
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
-          python -m compileall -q app tests apply_free_mode_patch.py apply_product_limits_patch.py
+          python -m compileall -q app tests apply_free_mode_patch.py apply_product_limits_patch.py apply_wallet_removal_patch.py
           python -m unittest discover -s tests -v
+          if grep -RniE --exclude-dir=static 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|/tonconnect-manifest' app; then
+            echo "A backend wallet-connection endpoint or manifest remains" >&2
+            exit 1
+          fi
+          test ! -e app/static/tonconnect-manifest.json
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -86,14 +90,18 @@ jobs:
         working-directory: release/anti-scam-guardian/web
         run: |
           node --test ../tests/*.mjs
+          node ./remove-wallet-connect.mjs
           npm install --no-audit --no-fund
-          node patch-deepmerge-security.mjs
-          node test-deepmerge-security.mjs
           node apply-result-metadata.mjs
           node apply-result-metadata.mjs
           node apply-free-unlimited.mjs
+          node remove-wallet-connect.mjs
           npm run build
           test -f ../app/static/index.html
+          if grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|ton-connect|wallet-status|wallet-policy-note' ../app/static; then
+            echo "A wallet-connect UI or SDK reference remains in the built Mini App" >&2
+            exit 1
+          fi
 
       - name: Build production Docker image
         run: docker build -t anti-scam-guardian:release-readiness .

@@ -78,8 +78,10 @@ jobs:
           mkdir release
           tar -xJf release.tar.xz -C release
           test -s release/anti-scam-guardian/web/package.json
-          cp overlays/web/patch-deepmerge-security.mjs release/anti-scam-guardian/web/patch-deepmerge-security.mjs
-          cp overlays/web/test-deepmerge-security.mjs release/anti-scam-guardian/web/test-deepmerge-security.mjs
+          cp overlays/web/wallet-removal.js release/anti-scam-guardian/web/src/wallet-removal.js
+          cp overlays/web/remove-wallet-connect.mjs release/anti-scam-guardian/web/remove-wallet-connect.mjs
+          cd release/anti-scam-guardian/web
+          node remove-wallet-connect.mjs
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -90,9 +92,10 @@ jobs:
         working-directory: release/anti-scam-guardian/web
         run: |
           npm install --no-audit --no-fund
-          node patch-deepmerge-security.mjs
-          node test-deepmerge-security.mjs
-          npm ls --all @tonconnect/ui deepmerge || true
+          if npm ls --all @tonconnect/ui; then
+            echo "TON Connect SDK is still installed" >&2
+            exit 1
+          fi
           npm audit --audit-level=high
 
   python-static-analysis:
@@ -114,6 +117,7 @@ jobs:
           cp overlays/app/restore_backup.py release/anti-scam-guardian/app/restore_backup.py
           cp overlays/app/apply_product_limits_patch.py release/anti-scam-guardian/apply_product_limits_patch.py
           cp overlays/app/apply_free_mode_patch.py release/anti-scam-guardian/apply_free_mode_patch.py
+          cp overlays/app/apply_wallet_removal_patch.py release/anti-scam-guardian/apply_wallet_removal_patch.py
           cp overlays/app/runtime_security_patch.py release/anti-scam-guardian/app/runtime_security_patch.py
           cp overlays/tests/test_runtime_security_patch.py release/anti-scam-guardian/tests/test_runtime_security_patch.py
           python -V
@@ -129,8 +133,13 @@ jobs:
           python -m pip install --upgrade pip bandit
           python apply_product_limits_patch.py app/config.py app/database.py app/main.py
           python apply_free_mode_patch.py app/bot.py
+          python apply_wallet_removal_patch.py app
           python app/runtime_security_patch.py app/runtime.py
           if grep -q -- '--forwarded-allow-ips' app/runtime.py; then echo 'Wildcard proxy trust remains enabled' >&2; exit 1; fi
+          if grep -RniE --exclude-dir=static 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|/tonconnect-manifest' app; then
+            echo "A backend wallet-connection endpoint or manifest remains" >&2
+            exit 1
+          fi
           python -m unittest discover -s tests -p 'test_runtime_security_patch.py' -v
           echo '--- all Bandit findings, including low severity (informational) ---'
           bandit -r app -l -ii -f txt || true
@@ -167,7 +176,7 @@ jobs:
               if not path.exists():
                   continue
               lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-              print(f"\\n===== {rel} ({len(lines)} lines) =====")
+              print(f"\n===== {rel} ({len(lines)} lines) =====")
               for first, last in spans:
                   print(f"--- lines {first}-{min(last, len(lines))} ---")
                   for index in range(first-1, min(last, len(lines))):
