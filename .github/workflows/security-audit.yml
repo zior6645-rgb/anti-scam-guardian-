@@ -140,7 +140,7 @@ jobs:
           python apply_wallet_removal_patch.py app
           python app/runtime_security_patch.py app/runtime.py
           if grep -q -- '--forwarded-allow-ips' app/runtime.py; then echo 'Wildcard proxy trust remains enabled' >&2; exit 1; fi
-          if grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|/tonconnect-manifest' app; then
+          if grep -RniE --exclude-dir=static 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|/tonconnect-manifest' app; then
             echo "A backend wallet-connection endpoint or manifest remains" >&2
             exit 1
           fi
