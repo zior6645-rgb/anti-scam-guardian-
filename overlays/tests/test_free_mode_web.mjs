@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyFreeUnlimitedUi } from "../web/apply-free-unlimited.mjs";
+import { applyFreeUnlimitedUi } from "../web/src/free-unlimited.js";
 
 test("account and post-scan counters are replaced by an unlimited free label", () => {
   const input = [
