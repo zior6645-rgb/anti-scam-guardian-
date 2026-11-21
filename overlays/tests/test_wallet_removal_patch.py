@@ -24,12 +24,12 @@ class WalletRemovalPatchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "config.py").write_text(
-                "# This lets the Mini App and TON Connect manifest use Railway's HTTPS domain\n"
-                "# without requiring the operator to buy or manage a domain.\n"
+                "    # This lets the Mini App and TON Connect manifest use Railway's HTTPS domain\n"
+                "    # without requiring the operator to buy or manage a domain.\n"
                 "public_base_url = 'https://example.com'\n"
-                "# A public domain can be generated after the first Railway deploy. Until then,\n"
-                "# the bot remains usable through commands and the Mini App button stays hidden.\n"
-                "# The manifest endpoint returns 503 until an HTTPS origin is configured.\n"
+                "    # A public domain can be generated after the first Railway deploy. Until then,\n"
+                "    # the bot remains usable through commands and the Mini App button stays hidden.\n"
+                "    # The manifest endpoint returns 503 until an HTTPS origin is configured.\n"
                 "webapp_url = public_base_url\n",
                 encoding="utf-8",
             )
