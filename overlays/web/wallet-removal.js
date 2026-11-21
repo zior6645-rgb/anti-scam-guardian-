@@ -9,13 +9,28 @@ export function removeWalletConnectSources({ main, html, css, packageJson }) {
     "",
   );
 
+  let nextCss = css
+    .replace(/#ton-connect\s*\{[^}]*\}\s*/g, "")
+    .replace(/\.wallet-policy-note(?:\s+strong|\s+p)?\s*\{[^}]*\}\s*/g, "");
+
   let nextHtml = html
     .replace(/^\s*<div id="ton-connect"><\/div>\r?\n/m, "")
     .replace(/^\s*<p id="wallet-status"[^>]*>[\s\S]*?<\/p>\r?\n/m, "");
 
-  let nextCss = css
-    .replace(/#ton-connect\s*\{[^}]*\}\s*/g, "")
-    .replace(/\.wallet-policy-note(?:\s+strong|\s+p)?\s*\{[^}]*\}\s*/g, "");
+  // Telegram's Android WebView can retain an old HTML document while its
+  // hashed CSS asset has already been replaced by a new deployment. Embed
+  // the exact production stylesheet in the document so the theme cannot
+  // disappear when that external asset is stale or unavailable.
+  const inlineTheme = `<style id="asg-inline-theme">\n${nextCss}\n</style>`;
+  if (nextHtml.includes('<style id="asg-inline-theme">')) {
+    nextHtml = nextHtml.replace(
+      /<style id="asg-inline-theme">[\s\S]*?<\/style>/,
+      inlineTheme,
+    );
+  } else {
+    if (!nextHtml.includes("</head>")) throw new Error("Could not locate the Mini App document head");
+    nextHtml = nextHtml.replace("</head>", inlineTheme + "\n</head>");
+  }
 
   const parsedPackage = JSON.parse(packageJson);
   if (parsedPackage.dependencies) {

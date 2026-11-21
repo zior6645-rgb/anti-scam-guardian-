@@ -41,6 +41,22 @@ def patch_main(source: str) -> str:
     )
     if "JSONResponse" in source or "tonconnect-manifest" in source.lower() or "build_tonconnect_manifest" in source:
         raise RuntimeError("TON Connect manifest code remains in app/main.py")
+
+    old_index = '        return FileResponse(STATIC_DIR / "index.html")'
+    new_index = (
+        '        return FileResponse(\n'
+        '            STATIC_DIR / "index.html",\n'
+        '            headers={\n'
+        '                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",\n'
+        '                "Pragma": "no-cache",\n'
+        '                "Expires": "0",\n'
+        '            },\n'
+        '        )'
+    )
+    if new_index not in source:
+        if source.count(old_index) != 1:
+            raise RuntimeError("Could not uniquely locate the Mini App index response for cache control")
+        source = source.replace(old_index, new_index, 1)
     return source
 
 
@@ -56,6 +72,19 @@ def patch_config(source: str) -> str:
         "    # The manifest endpoint returns 503 until an HTTPS origin is configured.\n",
         "    # The bot remains usable through commands until a public HTTPS Mini App origin is configured.\n",
     )
+    webapp_line = '    webapp_url = os.getenv("WEBAPP_URL", "").strip().rstrip("/") or public_base_url'
+    cache_version = "20261122-ui-fix-1"
+    if cache_version not in source:
+        if source.count(webapp_line) != 1:
+            raise RuntimeError("Could not uniquely locate WEBAPP_URL for Telegram WebView cache busting")
+        source = source.replace(
+            webapp_line,
+            webapp_line + '\n'
+            '    if webapp_url:\n'
+            '        cache_separator = "&" if "?" in webapp_url else "?"\n'
+            f'        webapp_url = f"{{webapp_url}}{{cache_separator}}v={cache_version}"',
+            1,
+        )
     if "TON Connect" in source or "tonconnect" in source.lower() or "manifest endpoint" in source.lower():
         raise RuntimeError("TON Connect configuration documentation remains in app/config.py")
     return source

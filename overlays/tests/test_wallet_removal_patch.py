@@ -20,7 +20,11 @@ class WalletRemovalPatchTests(unittest.TestCase):
                 '    return JSONResponse(build_tonconnect_manifest("https://example.com"))\n\n'
                 '@app.get("/health")\n'
                 'def health():\n'
-                '    return {"ok": True}\n',
+                '    return {"ok": True}\n\n'
+                'if STATIC_DIR.exists():\n'
+                '    @app.get("/")\n'
+                '    def index() -> FileResponse:\n'
+                '        return FileResponse(STATIC_DIR / "index.html")\n',
                 encoding="utf-8",
             )
             (root / "config.py").write_text(
@@ -30,7 +34,7 @@ class WalletRemovalPatchTests(unittest.TestCase):
                 "    # A public domain can be generated after the first Railway deploy. Until then,\n"
                 "    # the bot remains usable through commands and the Mini App button stays hidden.\n"
                 "    # The manifest endpoint returns 503 until an HTTPS origin is configured.\n"
-                "webapp_url = public_base_url\n",
+                '    webapp_url = os.getenv("WEBAPP_URL", "").strip().rstrip("/") or public_base_url\n',
                 encoding="utf-8",
             )
             (root / "legal.py").write_text(
@@ -47,8 +51,12 @@ class WalletRemovalPatchTests(unittest.TestCase):
             self.assertNotIn("tonconnect", main.lower())
             self.assertNotIn("JSONResponse", main)
             self.assertIn('@app.get("/health")', main)
+            self.assertIn('"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"', main)
+            self.assertIn('"Pragma": "no-cache"', main)
             self.assertNotIn("TON Connect", config)
-            self.assertIn("webapp_url = public_base_url", config)
+            self.assertIn('webapp_url = os.getenv("WEBAPP_URL"', config)
+            self.assertIn("20261122-ui-fix-1", config)
+            self.assertIn("cache_separator", config)
             self.assertNotIn("TON Connect", legal)
             self.assertNotIn("Pro entitlement", legal)
             self.assertFalse((root / "static" / "tonconnect-manifest.json").exists())
