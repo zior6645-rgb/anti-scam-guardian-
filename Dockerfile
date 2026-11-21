@@ -8,10 +8,10 @@ RUN python scripts/reconstruct.py /source
 
 FROM node:22-alpine AS frontend
 WORKDIR /web
-COPY --from=source /source/anti-scam-guardian/web/package.json ./package.json
-RUN npm install --no-audit --no-fund
 COPY --from=source /source/anti-scam-guardian/web/ ./
-RUN node ./patch-deepmerge-security.mjs && node ./test-deepmerge-security.mjs && node ./apply-result-metadata.mjs && node ./apply-result-metadata.mjs && node ./apply-free-unlimited.mjs && npm run build
+# Remove the Connect Wallet UI and SDK before npm installs dependencies.
+RUN node ./remove-wallet-connect.mjs && npm install --no-audit --no-fund
+RUN node ./patch-deepmerge-security.mjs && node ./test-deepmerge-security.mjs && node ./apply-result-metadata.mjs && node ./apply-result-metadata.mjs && node ./apply-free-unlimited.mjs && node ./remove-wallet-connect.mjs && npm run build && ! grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|ton-connect|wallet-status|wallet-policy-note' /app/static
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
