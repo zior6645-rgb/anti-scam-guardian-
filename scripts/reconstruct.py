@@ -28,7 +28,7 @@ def reconstruct(output: Path) -> Path:
     source = output / "anti-scam-guardian"
     for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / "app" / name)
-    for name in ("apply-database-refund-patch.py", "apply_bot_operator_patch.py", "apply_product_limits_patch.py"):
+    for name in ("apply_product_limits_patch.py", "apply_free_mode_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / name)
     for test in (root / "overlays/tests").iterdir():
         if test.suffix in {".py", ".mjs"}:
@@ -39,9 +39,8 @@ def reconstruct(output: Path) -> Path:
         elif path.suffix == ".mjs":
             shutil.copy2(path, source / "web" / path.name)
     commands = [
-        ["apply-database-refund-patch.py", "app/database.py"],
-        ["apply_bot_operator_patch.py", "app/bot.py"],
         ["apply_product_limits_patch.py", "app/config.py", "app/database.py", "app/main.py"],
+        ["apply_free_mode_patch.py", "app/bot.py"],
         ["-m", "app.runtime_security_patch", "app/runtime.py"],
     ]
     for args in commands:

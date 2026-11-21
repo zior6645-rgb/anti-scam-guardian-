@@ -110,27 +110,23 @@ class ProductionConfigurationTests(unittest.TestCase):
             "BOT_USERNAME": "test_bot",
             "ENVIRONMENT": "production",
             "ALLOW_DEV_AUTH": "true",
-            "PAYMENTS_MODE": "disabled",
-            "STARS_MONTHLY_PRICE": "0",
         }, clear=True):
             with self.assertRaisesRegex(RuntimeError, "ALLOW_DEV_AUTH must be false"):
                 get_settings()
 
-    def test_production_settings_accept_secure_auth_and_keep_billing_off_by_default(self):
+    def test_production_settings_accept_secure_auth_and_unlimited_free_access(self):
         with patch.dict(os.environ, {
             "BOT_TOKEN": BOT_TOKEN,
             "BOT_USERNAME": "test_bot",
             "ENVIRONMENT": "production",
             "ALLOW_DEV_AUTH": "false",
             "TELEGRAM_INITDATA_MAX_AGE_SECONDS": "600",
-            "PAYMENTS_MODE": "disabled",
-            "STARS_MONTHLY_PRICE": "0",
         }, clear=True):
             settings = get_settings()
         self.assertFalse(settings.allow_dev_auth)
+        self.assertEqual(settings.free_scans_per_day, 0)
+        self.assertFalse(hasattr(settings, "payments_mode"))
         self.assertEqual(settings.initdata_max_age_seconds, 600)
-        self.assertEqual(settings.payments_mode, "disabled")
-        self.assertEqual(settings.stars_monthly_price, 0)
 
     def test_init_data_max_age_has_a_60_second_floor(self):
         with patch.dict(os.environ, {
@@ -139,8 +135,6 @@ class ProductionConfigurationTests(unittest.TestCase):
             "ENVIRONMENT": "production",
             "ALLOW_DEV_AUTH": "false",
             "TELEGRAM_INITDATA_MAX_AGE_SECONDS": "1",
-            "PAYMENTS_MODE": "disabled",
-            "STARS_MONTHLY_PRICE": "0",
         }, clear=True):
             settings = get_settings()
         self.assertEqual(settings.initdata_max_age_seconds, 60)
