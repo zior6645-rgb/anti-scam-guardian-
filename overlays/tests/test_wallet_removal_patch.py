@@ -34,7 +34,7 @@ class WalletRemovalPatchTests(unittest.TestCase):
                 "    # A public domain can be generated after the first Railway deploy. Until then,\n"
                 "    # the bot remains usable through commands and the Mini App button stays hidden.\n"
                 "    # The manifest endpoint returns 503 until an HTTPS origin is configured.\n"
-                "webapp_url = public_base_url\n",
+                "    webapp_url = public_base_url\n",
                 encoding="utf-8",
             )
             (root / "legal.py").write_text(
