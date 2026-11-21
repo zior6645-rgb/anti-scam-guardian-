@@ -95,14 +95,15 @@ jobs:
           npm run build
           test -f ../app/static/index.html
 
-      - name: Export Mini App source for wallet-removal review
+      - name: Export reconstructed sources for wallet-removal review
         uses: actions/upload-artifact@v4
         with:
-          name: miniapp-source-for-wallet-removal
+          name: source-for-complete-wallet-removal
           path: |
             release/anti-scam-guardian/web/src/
             release/anti-scam-guardian/web/index.html
             release/anti-scam-guardian/web/package.json
+            release/anti-scam-guardian/app/
           if-no-files-found: error
 
       - name: Build production Docker image
