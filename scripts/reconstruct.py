@@ -7,8 +7,8 @@ starts the bot, or touches a deployed database.
 from __future__ import annotations
 
 import base64
+import ast
 import io
-import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -33,13 +33,23 @@ def reconstruct(output: Path) -> Path:
     legacy_api_test = source / "tests" / "test_api.py"
     if legacy_api_test.is_file():
         legacy = legacy_api_test.read_text(encoding="utf-8")
-        obsolete = re.compile(
-            r"(?ms)^    def test_tonconnect_manifest_requires_configured_https_origin\(self\):\n.*?(?=^    def |\Z)"
-        )
-        legacy, removed = obsolete.subn("", legacy, count=1)
+        tree = ast.parse(legacy)
+        removed = 0
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                retained = []
+                for member in node.body:
+                    if (
+                        isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and member.name == "test_tonconnect_manifest_requires_configured_https_origin"
+                    ):
+                        removed += 1
+                    else:
+                        retained.append(member)
+                node.body = retained
         if removed != 1:
             raise RuntimeError("Could not locate the obsolete TON Connect manifest API test")
-        legacy_api_test.write_text(legacy, encoding="utf-8")
+        legacy_api_test.write_text(ast.unparse(tree) + "\n", encoding="utf-8")
     for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / "app" / name)
     for name in (
