@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,6 +27,19 @@ def reconstruct(output: Path) -> Path:
     with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as bundle:
         bundle.extractall(output, filter="data")
     source = output / "anti-scam-guardian"
+    # The pinned archive contains an obsolete API test that expects the TON
+    # Connect manifest to return 200. The wallet-free release intentionally
+    # removes that endpoint; retain the rest of the API test suite.
+    legacy_api_test = source / "tests" / "test_api.py"
+    if legacy_api_test.is_file():
+        legacy = legacy_api_test.read_text(encoding="utf-8")
+        obsolete = re.compile(
+            r"(?ms)^    def test_tonconnect_manifest_requires_configured_https_origin\\(self\\):\\n.*?(?=^    def |\\Z)"
+        )
+        legacy, removed = obsolete.subn("", legacy, count=1)
+        if removed != 1:
+            raise RuntimeError("Could not locate the obsolete TON Connect manifest API test")
+        legacy_api_test.write_text(legacy, encoding="utf-8")
     for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / "app" / name)
     for name in (
