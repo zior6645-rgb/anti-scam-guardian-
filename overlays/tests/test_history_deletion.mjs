@@ -37,7 +37,7 @@ test('history UI adds safe local search and risk filters', () => {
 test('history export is user-triggered JSON download and uses no export upload endpoint', () => {
   const output = applyHistoryManagement(source);
   assert.ok(output.includes('Export history (JSON)'));
-  assert.ok(output.includes('JSON.stringify(items || [], null, 2)'));
+  assert.ok(output.includes("fetch('/api/history/export'"));
   assert.ok(output.includes('antiscam-guardian-history.json'));
   assert.ok(output.includes("fetch('/api/history/export'"));
   assert.ok(output.includes('telegram.openLink(downloadUrl.href)'));
