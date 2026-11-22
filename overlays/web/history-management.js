@@ -251,7 +251,17 @@ ${marker}
   border-color: #38516f;
   background: #17283d;
 }
-.history-export-download {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid #38516f;\n  border-radius: 0.65rem;\n  padding: 0.55rem 0.75rem;\n  color: #b9d8ff;\n  text-decoration: underline;\n  font: inherit;\n}\n.history-filter-summary {
+.history-export-download {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #38516f;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  color: #b9d8ff;
+  text-decoration: underline;
+  font: inherit;
+}
+.history-filter-summary {
   flex: 1 1 100%;
   margin: 0;
   color: #91a2ba;
