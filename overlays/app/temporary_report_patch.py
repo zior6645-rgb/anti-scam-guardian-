@@ -7,6 +7,28 @@ from pathlib import Path
 MARKER = "# AntiScam Guardian: short-lived, single-use Telegram report downloads."
 
 
+def _insert_imports(source: str) -> str:
+    tree = ast.parse(source)
+    if "from fastapi import Request" in source:
+        return source
+    future_nodes = [node for node in tree.body if isinstance(node, ast.ImportFrom) and node.module == "__future__"]
+    if future_nodes:
+        line_end = max(node.end_lineno for node in future_nodes)
+    elif tree.body and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, (ast.Str, ast.Constant)):
+        line_end = tree.body[0].end_lineno
+    else:
+        line_end = 0
+    lines = source.splitlines(keepends=True)
+    imports = (
+        "import os\\n"
+        "import secrets\\n"
+        "import time\\n"
+        "from fastapi import Request\\n"
+        "from fastapi.responses import JSONResponse, Response\\n"
+    )
+    return "".join(lines[:line_end]) + imports + "".join(lines[line_end:])
+
+
 def patch_main_source(source: str) -> str:
     if MARKER in source:
         return source
@@ -22,18 +44,7 @@ def patch_main_source(source: str) -> str:
     if len(app_assignments) != 1:
         raise ValueError(f"Expected one FastAPI app assignment, found {len(app_assignments)}")
 
-    imports = (
-        "import os\n"
-        "import secrets\n"
-        "import time\n"
-        "from fastapi import Request\n"
-        "from fastapi.responses import JSONResponse, Response\n"
-    )
-    if "from fastapi import Request" not in source:
-        source = imports + source
-
-    # Re-parse after import insertion and place routes immediately after app creation,
-    # before any catch-all static mount can intercept /api/reports.
+    source = _insert_imports(source)
     tree = ast.parse(source)
     app_assignments = [
         node for node in tree.body
@@ -47,7 +58,7 @@ def patch_main_source(source: str) -> str:
         raise ValueError("FastAPI app assignment became ambiguous after import insertion")
     line_end = app_assignments[0].end_lineno
     lines = source.splitlines(keepends=True)
-    insertion = """\n
+    insertion = """\\n
 # AntiScam Guardian: short-lived, single-use Telegram report downloads.
 _REPORT_DOWNLOADS: dict[str, tuple[float, bytes]] = {}
 _REPORT_UPLOADS_BY_IP: dict[str, list[float]] = {}
