@@ -20,6 +20,7 @@ test('untrusted subjects remain plain text and export excludes account secrets',
   assert.ok(!text.includes('SECRET'));
   assert.ok(!text.includes('telegram_id'));
 });
+// Regression guard for the exact mobile download paths used by the Mini App.
 test('mobile download supports local native file sharing and a longer-lived browser fallback', () => {
   assert.ok(source.includes('navigator.canShare({ files: [file] })'));
   assert.ok(source.includes('navigator.share({ files: [file], title:'));
