@@ -61,7 +61,7 @@ function exportHistoryJson(items) {
 export function applyHistoryManagement(source) {
   const alreadyPatched = source.includes('async function deleteAllHistory()');
   if (!alreadyPatched) {
-    const renderAnchor = 'function renderHistory(items) {\\n  historyBox.replaceChildren();';
+    const renderAnchor = 'function renderHistory(items) {\n  historyBox.replaceChildren();';
     const renderReplacement = `function renderHistory(items) {
   historyBox.replaceChildren();
   if (items?.length) {
