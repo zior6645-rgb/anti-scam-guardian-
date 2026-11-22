@@ -165,7 +165,7 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     tld = labels[-1] if labels else ""
     if tld in SUSPICIOUS_TLDS:
         flags.append(f"The URL uses a TLD that is frequently abused in phishing campaigns: .{tld}")
-        score += 15
+        score += 20
     redirect_keys = sorted(key.lower() for key in parse_qsl(parsed.query, keep_blank_values=True) if key.lower() in REDIRECT_PARAMETERS)
     if redirect_keys:
         flags.append("The URL contains redirect-style parameters: " + ", ".join(redirect_keys))
