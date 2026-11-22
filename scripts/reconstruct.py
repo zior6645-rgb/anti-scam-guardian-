@@ -50,7 +50,7 @@ def reconstruct(output: Path) -> Path:
         if removed != 1:
             raise RuntimeError("Could not locate the obsolete TON Connect manifest API test")
         legacy_api_test.write_text(ast.unparse(tree) + "\n", encoding="utf-8")
-    for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py"):
+    for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py", "temporary_report_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / "app" / name)
     for name in (
         "apply_product_limits_patch.py",
@@ -71,6 +71,7 @@ def reconstruct(output: Path) -> Path:
         ["apply_free_mode_patch.py", "app/bot.py"],
         ["apply_wallet_removal_patch.py", "app"],
         ["-m", "app.runtime_security_patch", "app/runtime.py"],
+        ["-m", "app.temporary_report_patch", "app/main.py"],
     ]
     for args in commands:
         subprocess.run([sys.executable, *args], cwd=source, check=True)
