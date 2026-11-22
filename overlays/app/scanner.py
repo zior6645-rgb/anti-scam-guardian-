@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import parse_qsl, quote, urlparse, urlunparse
 
 import httpx
 
@@ -16,6 +16,10 @@ SUSPICIOUS_TERMS = {
     "airdrop", "claim", "connect-wallet", "wallet-connect",
     "seed", "recovery", "verify-wallet"
 }
+SUSPICIOUS_TLDS = {
+    "click", "country", "gq", "ml", "cf", "ga", "tk", "zip", "mov", "top", "work"
+}
+REDIRECT_PARAMETERS = {"redirect", "redirect_uri", "return", "return_to", "continue", "next", "target", "dest", "destination", "url"}
 PHISHTANK_ENDPOINT = "https://checkurl.phishtank.com/checkurl/"
 TONAPI_TIMEOUT = httpx.Timeout(25.0, connect=15.0)
 
@@ -146,6 +150,29 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     if matching_terms:
         flags.append("The URL contains wallet/claim-related terms: " + ", ".join(matching_terms))
         score += 15
+
+    # Additional offline-only indicators. These never transmit the submitted URL.
+    labels = host.split(".")
+    if len(host) >= 55:
+        flags.append("The hostname is unusually long")
+        score += 10
+    if host.count("-") >= 3:
+        flags.append("The hostname contains an unusually high number of hyphens")
+        score += 10
+    if any(re.search(r"\d{4,}", label) for label in labels):
+        flags.append("The hostname contains a long numeric sequence")
+        score += 10
+    tld = labels[-1] if labels else ""
+    if tld in SUSPICIOUS_TLDS:
+        flags.append(f"The URL uses a TLD that is frequently abused in phishing campaigns: .{tld}")
+        score += 15
+    redirect_keys = sorted(key.lower() for key in parse_qsl(parsed.query, keep_blank_values=True) if key.lower() in REDIRECT_PARAMETERS)
+    if redirect_keys:
+        flags.append("The URL contains redirect-style parameters: " + ", ".join(redirect_keys))
+        score += 10
+    if parsed.port is not None and parsed.port not in ({80, 443} if parsed.scheme == "https" else {80, 443}):
+        flags.append("The URL uses a non-standard web port")
+        score += 10
     if parsed.scheme == "http":
         flags.append("The URL does not use HTTPS")
         score += 10
