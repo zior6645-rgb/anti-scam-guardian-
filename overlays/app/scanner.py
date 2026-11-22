@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 from urllib.parse import parse_qsl, quote, urlparse, urlunparse
 
 import httpx
+import tldextract
 
 from .config import get_settings
 from .ton_address import normalize_ton_address
@@ -23,6 +24,7 @@ SUSPICIOUS_TLDS = {
 REDIRECT_PARAMETERS = {"redirect", "redirect_uri", "return", "return_to", "continue", "next", "target", "dest", "destination", "url"}
 PHISHTANK_ENDPOINT = "https://checkurl.phishtank.com/checkurl/"
 TONAPI_TIMEOUT = httpx.Timeout(25.0, connect=15.0)
+PSL_EXTRACTOR = tldextract.TLDExtract(suffix_list_urls=(), include_psl_private_domains=True)
 
 
 def normalize_url_input(value: str) -> str:
@@ -133,16 +135,20 @@ BRAND_DOMAINS = {
 
 
 def get_registrable_domain(host: str) -> str:
-    """Return an approximate registrable domain using common multi-label suffixes.
-
-    This is intentionally not presented as a complete Public Suffix List parser.
-    """
+    """Return the registrable domain using the bundled Public Suffix List snapshot."""
     host = host.strip(".").lower()
     try:
         ipaddress.ip_address(host)
         return host
     except ValueError:
         pass
+
+    extracted = PSL_EXTRACTOR(host)
+    if extracted.top_domain_under_public_suffix:
+        return extracted.top_domain_under_public_suffix.lower()
+
+    # Fallback for syntactically valid but unlisted suffixes; do not claim this
+    # fallback is equivalent to the Public Suffix List.
     labels = host.split(".")
     if len(labels) < 2:
         return host
@@ -175,8 +181,10 @@ def _brand_mismatch(host: str, registrable_domain: str) -> tuple[str | None, boo
 
 
 
-async def _check_phishtank(url: str, app_key: str) -> dict:
-    data = {"url": url, "format": "json", "app_key": app_key}
+async def _check_phishtank(url: str, app_key: str | None = None) -> dict:
+    data = {"url": url, "format": "json"}
+    if app_key:
+        data["app_key"] = app_key
     headers = {
         "User-Agent": "AntiScamGuardian/0.2.5 (phishing URL checker)",
         "Accept": "application/json",
@@ -252,12 +260,12 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
             flags.append(
                 f"The registrable domain resembles the brand '{brand}' but is not its official domain ({BRAND_DOMAINS[brand]})"
             )
-            score += 40
+            score += 35
         else:
             flags.append(
                 f"The hostname uses the brand name '{brand}' outside its official domain ({BRAND_DOMAINS[brand]}); this can be a deceptive subdomain"
             )
-            score += 45
+            score += 35
 
     lowered = (host + parsed.path + "?" + parsed.query).lower()
     searchable = re.sub(r"[^a-z0-9]+", " ", lowered)
@@ -304,10 +312,12 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     settings = get_settings()
     intelligence = {
         "provider": "PhishTank",
-        "status": "not_configured" if not settings.phishtank_app_key else "not_checked_no_consent",
+        "status": "not_checked_no_consent",
     }
-    if settings.phishtank_app_key and share_with_phishtank:
-        intelligence = await _check_phishtank(url, settings.phishtank_app_key)
+    # PhishTank documents app_key as optional for low-volume lookups. The URL
+    # is sent only after explicit user consent, with the key omitted if absent.
+    if share_with_phishtank:
+        intelligence = await _check_phishtank(url, settings.phishtank_app_key or None)
         if intelligence["status"] == "confirmed_phishing":
             flags.append("PhishTank lists this URL as a verified and currently valid phishing URL")
             score = 100
@@ -326,13 +336,11 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
 
     method = (
         "heuristics_plus_phishtank"
-        if intelligence["status"] not in {"not_configured", "not_checked_no_consent", "unavailable", "rate_limited"}
+        if intelligence["status"] not in {"not_checked_no_consent", "unavailable", "rate_limited"}
         else "local_heuristics_only"
     )
     feed_status = intelligence["status"]
-    if feed_status == "not_configured":
-        feed_note = "PhishTank is not configured; this scan used local heuristics only."
-    elif feed_status == "not_checked_no_consent":
+    if feed_status == "not_checked_no_consent":
         feed_note = "PhishTank was not queried because external sharing was not approved."
     elif feed_status == "not_listed":
         feed_note = "PhishTank did not list this URL in the lookup performed; this is not proof of safety."
@@ -357,8 +365,7 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
         "method": method,
         "threat_intelligence": intelligence,
         "external_lookup_shared": bool(
-            settings.phishtank_app_key and share_with_phishtank
-            and intelligence["status"] not in {"unavailable", "rate_limited"}
+            share_with_phishtank and intelligence["status"] not in {"unavailable", "rate_limited"}
         ),
         "disclaimer": (
             f"{feed_note} "
