@@ -40,6 +40,11 @@ test('history export is user-triggered JSON download and uses no export upload e
   assert.ok(output.includes('JSON.stringify(items || [], null, 2)'));
   assert.ok(output.includes('antiscam-guardian-history.json'));
   assert.ok(output.includes('URL.createObjectURL'));
+  assert.ok(output.includes('navigator.canShare?.({ files: [file] })'));
+  assert.ok(output.includes('navigator.share({ files: [file], title:'));
+  assert.ok(output.includes('history-export-download'));
+  assert.ok(output.includes('Tap here to download JSON'));
+  assert.ok(!output.includes('link.click()'));
   assert.ok(!output.includes('/api/history/export'));
 });
 

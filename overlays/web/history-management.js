@@ -43,17 +43,47 @@ function applyHistoryFilters() {
   if (summary) summary.textContent = visible + ' of ' + cards.length + ' scans shown';
 }
 
-function exportHistoryJson(items) {
-  const blob = new Blob([JSON.stringify(items || [], null, 2)], { type: 'application/json;charset=utf-8' });
+async function exportHistoryJson(items) {
+  const json = JSON.stringify(items || [], null, 2);
+  const filename = 'antiscam-guardian-history.json';
+
+  // Telegram's Android WebView may ignore a programmatic anchor click.
+  // Prefer the native Android share sheet when file sharing is supported.
+  try {
+    const file = new File([json], filename, { type: 'application/json' });
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'AntiScam Guardian scan history' });
+      showMessage('History file shared. Choose a save destination if prompted.', 'success');
+      return;
+    }
+  } catch (error) {
+    // A deliberate user cancellation should not create a second download flow.
+    if (error?.name === 'AbortError') return;
+    // Continue to the explicit download-link fallback.
+  }
+
+  const previous = historyBox.querySelector('.history-export-download');
+  if (previous?.dataset.objectUrl) URL.revokeObjectURL(previous.dataset.objectUrl);
+
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'antiscam-guardian-history.json';
+  link.download = filename;
   link.rel = 'noopener';
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  link.className = 'history-export-download';
+  link.dataset.objectUrl = url;
+  link.textContent = 'Tap here to download JSON';
+  link.setAttribute('aria-label', 'Tap to download scan history JSON file');
+
+  const toolbar = historyBox.querySelector('.history-actions');
+  if (toolbar) {
+    toolbar.querySelector('.history-export-download')?.remove();
+    toolbar.append(link);
+  } else {
+    historyBox.append(link);
+  }
+  showMessage('Tap “Tap here to download JSON” to save the file on your device.', 'success');
 }
 
 `;
@@ -154,7 +184,7 @@ function applyHistoryEnhancements(source) {
     exportButton.type = 'button';
     exportButton.className = 'history-export';
     exportButton.textContent = 'Export history (JSON)';
-    exportButton.addEventListener('click', () => exportHistoryJson(items));
+    exportButton.addEventListener('click', () => { void exportHistoryJson(items); });
 
     const summary = document.createElement('p');
     summary.id = 'history-filter-summary';
@@ -220,6 +250,16 @@ ${marker}
 .history-export {
   border-color: #38516f;
   background: #17283d;
+}
+.history-export-download {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #38516f;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  color: #b9d8ff;
+  text-decoration: underline;
+  font: inherit;
 }
 .history-filter-summary {
   flex: 1 1 100%;
