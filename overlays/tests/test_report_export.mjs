@@ -21,9 +21,9 @@ test('untrusted subjects remain plain text and export excludes account secrets',
   assert.ok(!text.includes('telegram_id'));
 });
 test('mobile download supports local native file sharing and a longer-lived browser fallback', () => {
-  assert.match(source, /navigator\\.canShare\\(\\{ files: \\[file\\] \\}\\)/);
-  assert.match(source, /navigator\\.share\\(\\{ files: \\[file\\], title:/);
-  assert.match(source, /link\\.download = filename/);
-  assert.match(source, /URL\\.revokeObjectURL\\(url\\), 60000/);
-  assert.match(source, /Generated on your device/);
+  assert.ok(source.includes('navigator.canShare({ files: [file] })'));
+  assert.ok(source.includes('navigator.share({ files: [file], title:'));
+  assert.ok(source.includes('link.download = filename'));
+  assert.ok(source.includes('URL.revokeObjectURL(url), 60000'));
+  assert.ok(source.includes('Generated on your device'));
 });
