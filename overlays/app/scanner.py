@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+from difflib import SequenceMatcher
 from urllib.parse import parse_qsl, quote, urlparse, urlunparse
 
 import httpx
@@ -25,11 +26,14 @@ TONAPI_TIMEOUT = httpx.Timeout(25.0, connect=15.0)
 
 
 def normalize_url_input(value: str) -> str:
+    """Validate and canonicalize a user-supplied HTTP(S) URL without fetching it."""
+    if not isinstance(value, str):
+        raise ValueError("Enter a valid website URL")
     text = value.strip()
     if not text or len(text) > 2048:
         raise ValueError("Enter a URL between 1 and 2048 characters")
-    if any(ord(ch) < 32 for ch in text):
-        raise ValueError("URL contains control characters")
+    if any(ord(ch) < 32 or ch.isspace() for ch in text) or "\\" in text:
+        raise ValueError("URL contains whitespace or invalid control characters")
     if re.match(r"^[a-z][a-z0-9+.-]*:", text, flags=re.IGNORECASE) and not text.lower().startswith(
         ("http://", "https://")
     ):
@@ -43,10 +47,12 @@ def normalize_url_input(value: str) -> str:
     except ValueError as exc:
         raise ValueError("Enter a valid http:// or https:// URL") from exc
 
-    if parsed.scheme not in {"http", "https"} or not hostname:
+    if parsed.scheme.lower() not in {"http", "https"} or not hostname:
         raise ValueError("Enter a valid http:// or https:// URL")
-    if parsed.username or parsed.password:
+    if parsed.username is not None or parsed.password is not None:
         raise ValueError("URLs containing embedded credentials are not accepted")
+    if parsed.netloc.endswith(":"):
+        raise ValueError("URL contains an invalid port")
 
     host = hostname.rstrip(".").lower()
     if not host or host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
@@ -66,20 +72,107 @@ def normalize_url_input(value: str) -> str:
             ascii_host = host.encode("idna").decode("ascii").lower()
         except UnicodeError as idna_exc:
             raise ValueError("Hostname is invalid") from idna_exc
+
         if len(ascii_host) > 253:
             raise ValueError("Hostname is too long")
         labels = ascii_host.split(".")
+        if len(labels) < 2:
+            raise ValueError("A complete domain name is required; single-word hostnames are not accepted")
         if any(
-            not label or len(label) > 63 or label.startswith("-")
-            or label.endswith("-") or not re.fullmatch(r"[a-z0-9-]+", label)
+            not label
+            or len(label) > 63
+            or label.startswith("-")
+            or label.endswith("-")
+            or not re.fullmatch(r"[a-z0-9-]+", label)
             for label in labels
         ):
             raise ValueError("Hostname contains invalid characters")
+        tld = labels[-1]
+        if len(tld) < 2 or not re.fullmatch(r"(?:[a-z]{2,}|xn--[a-z0-9-]{2,})", tld):
+            raise ValueError("Hostname has an invalid top-level domain")
 
     netloc = f"[{ascii_host}]" if is_ip and ":" in ascii_host else ascii_host
     if port is not None:
+        if not 1 <= port <= 65535:
+            raise ValueError("URL port is outside the valid range")
         netloc += f":{port}"
     return urlunparse((parsed.scheme.lower(), netloc, parsed.path or "/", "", parsed.query, ""))
+
+
+MULTI_LABEL_PUBLIC_SUFFIXES = {
+    "ac.uk", "co.uk", "gov.uk", "ltd.uk", "me.uk", "net.uk", "org.uk", "plc.uk",
+    "com.au", "net.au", "org.au", "edu.au", "gov.au",
+    "co.nz", "net.nz", "org.nz", "govt.nz",
+    "com.br", "net.br", "org.br",
+    "com.cn", "net.cn", "org.cn", "gov.cn",
+    "com.sg", "net.sg", "org.sg", "com.hk", "net.hk", "org.hk",
+    "co.in", "firm.in", "net.in", "org.in", "gen.in", "ind.in",
+    "co.jp", "ne.jp", "or.jp", "go.jp", "ac.jp",
+    "co.kr", "or.kr", "go.kr", "com.mx", "com.tr", "com.tw",
+    "com.ar", "com.pl", "com.ua", "com.my", "com.ph", "com.vn",
+}
+
+BRAND_DOMAINS = {
+    "google": "google.com",
+    "microsoft": "microsoft.com",
+    "apple": "apple.com",
+    "amazon": "amazon.com",
+    "paypal": "paypal.com",
+    "binance": "binance.com",
+    "coinbase": "coinbase.com",
+    "telegram": "telegram.org",
+    "metamask": "metamask.io",
+    "openai": "openai.com",
+    "tether": "tether.to",
+    "trustwallet": "trustwallet.com",
+    "ledger": "ledger.com",
+    "bybit": "bybit.com",
+    "okx": "okx.com",
+    "kraken": "kraken.com",
+}
+
+
+def get_registrable_domain(host: str) -> str:
+    """Return an approximate registrable domain using common multi-label suffixes.
+
+    This is intentionally not presented as a complete Public Suffix List parser.
+    """
+    host = host.strip(".").lower()
+    try:
+        ipaddress.ip_address(host)
+        return host
+    except ValueError:
+        pass
+    labels = host.split(".")
+    if len(labels) < 2:
+        return host
+    last_two = ".".join(labels[-2:])
+    suffix_size = 2 if last_two in MULTI_LABEL_PUBLIC_SUFFIXES else 1
+    if len(labels) <= suffix_size:
+        return host
+    return ".".join(labels[-(suffix_size + 1):])
+
+
+def _brand_mismatch(host: str, registrable_domain: str) -> tuple[str | None, bool]:
+    labels = host.split(".")
+    for brand, official_domain in BRAND_DOMAINS.items():
+        for label in labels:
+            compact = label.replace("-", "")
+            if brand in compact and registrable_domain != official_domain:
+                return brand, False
+
+    base_label = registrable_domain.split(".")[0]
+    normalized = base_label.replace("-", "")
+    leet_normalized = normalized.translate(str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t"}))
+    for brand, official_domain in BRAND_DOMAINS.items():
+        if registrable_domain == official_domain:
+            continue
+        if abs(len(leet_normalized) - len(brand)) <= 1 and SequenceMatcher(
+            None, leet_normalized, brand
+        ).ratio() >= 0.82:
+            return brand, True
+    return None, False
+
 
 
 async def _check_phishtank(url: str, app_key: str) -> dict:
@@ -132,26 +225,50 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
 
     try:
         ipaddress.ip_address(host)
-        flags.append("The hostname is a raw IP address")
+        flags.append("The hostname is a raw IP address rather than a named domain")
         score += 30
+        registrable_domain = host
+        subdomain_count = 0
     except ValueError:
-        pass
+        registrable_domain = get_registrable_domain(host)
+        labels = host.split(".")
+        subdomain_count = max(0, len(labels) - len(registrable_domain.split(".")))
+
     if "xn--" in host:
-        flags.append("The hostname contains punycode (possible look-alike domain)")
+        flags.append("The hostname contains IDN punycode; inspect for visually confusable characters")
         score += 25
+
     if host in SHORTENER_DOMAINS:
-        flags.append("The URL uses a public link-shortening domain")
+        flags.append("The URL uses a public link-shortening domain, which hides the final destination")
         score += 15
-    if host.count(".") >= 4:
-        flags.append("The hostname has an unusually deep subdomain structure")
+
+    if subdomain_count >= 2:
+        flags.append("The hostname has multiple nested subdomain labels")
         score += 10
+
+    brand, is_lookalike = _brand_mismatch(host, registrable_domain)
+    if brand:
+        if is_lookalike:
+            flags.append(
+                f"The registrable domain resembles the brand '{brand}' but is not its official domain ({BRAND_DOMAINS[brand]})"
+            )
+            score += 40
+        else:
+            flags.append(
+                f"The hostname uses the brand name '{brand}' outside its official domain ({BRAND_DOMAINS[brand]}); this can be a deceptive subdomain"
+            )
+            score += 45
+
     lowered = (host + parsed.path + "?" + parsed.query).lower()
-    matching_terms = sorted(term for term in SUSPICIOUS_TERMS if term in lowered)
+    searchable = re.sub(r"[^a-z0-9]+", " ", lowered)
+    matching_terms = sorted(
+        term for term in SUSPICIOUS_TERMS
+        if term.replace("-", " ") in searchable
+    )
     if matching_terms:
         flags.append("The URL contains wallet/claim-related terms: " + ", ".join(matching_terms))
         score += 15
 
-    # Additional offline-only indicators. These never transmit the submitted URL.
     labels = host.split(".")
     if len(host) >= 55:
         flags.append("The hostname is unusually long")
@@ -162,15 +279,22 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     if any(re.search(r"\d{4,}", label) for label in labels):
         flags.append("The hostname contains a long numeric sequence")
         score += 10
+
     tld = labels[-1] if labels else ""
     if tld in SUSPICIOUS_TLDS:
-        flags.append(f"The URL uses a TLD that is frequently abused in phishing campaigns: .{tld}")
+        flags.append(f"The URL uses a TLD that can be abused in phishing campaigns: .{tld}")
         score += 20
-    redirect_keys = sorted(key.lower() for key, _value in parse_qsl(parsed.query, keep_blank_values=True) if key.lower() in REDIRECT_PARAMETERS)
+
+    redirect_keys = sorted(
+        key.lower()
+        for key, _value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.lower() in REDIRECT_PARAMETERS
+    )
     if redirect_keys:
         flags.append("The URL contains redirect-style parameters: " + ", ".join(redirect_keys))
         score += 10
-    if parsed.port is not None and parsed.port not in ({80, 443} if parsed.scheme == "https" else {80, 443}):
+
+    if parsed.port is not None and parsed.port not in {80, 443}:
         flags.append("The URL uses a non-standard web port")
         score += 10
     if parsed.scheme == "http":
@@ -192,12 +316,14 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
             score = max(score, 35)
 
     score = min(score, 100)
+    # A non-empty indicator list must never be paired with a clean/no-obvious-flags verdict.
     if intelligence["status"] == "confirmed_phishing" or score >= 50:
         level = "high"
-    elif intelligence["status"] == "listed_not_confirmed" or score >= 20:
+    elif intelligence["status"] == "listed_not_confirmed" or flags:
         level = "caution"
     else:
         level = "no_obvious_flags"
+
     method = (
         "heuristics_plus_phishtank"
         if intelligence["status"] not in {"not_configured", "not_checked_no_consent", "unavailable", "rate_limited"}
@@ -209,7 +335,7 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     elif feed_status == "not_checked_no_consent":
         feed_note = "PhishTank was not queried because external sharing was not approved."
     elif feed_status == "not_listed":
-        feed_note = "PhishTank did not list this URL in the lookup performed."
+        feed_note = "PhishTank did not list this URL in the lookup performed; this is not proof of safety."
     elif feed_status == "listed_not_confirmed":
         feed_note = "PhishTank returned a listing that is not confirmed as currently valid."
     elif feed_status == "confirmed_phishing":
@@ -222,6 +348,9 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     return {
         "kind": "url",
         "subject": host,
+        "hostname": host,
+        "registrable_domain": registrable_domain,
+        "subdomain_count": subdomain_count,
         "risk_level": level,
         "heuristic_score": score,
         "flags": flags,
@@ -233,6 +362,7 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
         ),
         "disclaimer": (
             f"{feed_note} "
+            "Heuristic scores are rule-based indicators, not probabilities. "
             "A lack of detected indicators does not prove safety. "
             "This is a limited screening result, not a security audit."
         ),
