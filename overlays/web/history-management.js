@@ -44,46 +44,47 @@ function applyHistoryFilters() {
 }
 
 async function exportHistoryJson(items) {
-  const json = JSON.stringify(items || [], null, 2);
-  const filename = 'antiscam-guardian-history.json';
+  const button = historyBox.querySelector('.history-export');
+  if (button?.disabled) return;
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Preparing download…';
+  }
 
-  // Telegram's Android WebView may ignore a programmatic anchor click.
-  // Prefer the native Android share sheet when file sharing is supported.
   try {
-    const file = new File([json], filename, { type: 'application/json' });
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'AntiScam Guardian scan history' });
-      showMessage('History file shared. Choose a save destination if prompted.', 'success');
-      return;
+    // Create an authenticated, short-lived server attachment. This avoids
+    // Blob URLs and download attributes that Telegram Android WebView may ignore.
+    const response = await fetch('/api/history/export', {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.url) {
+      throw new Error(payload.detail || 'Could not prepare the history file.');
+    }
+
+    const downloadUrl = new URL(payload.url, window.location.href);
+    if (downloadUrl.protocol !== 'https:' || downloadUrl.origin !== window.location.origin) {
+      throw new Error('The download address is not a trusted HTTPS address.');
+    }
+
+    const telegram = window.Telegram?.WebApp;
+    if (telegram && typeof telegram.openLink === 'function') {
+      telegram.openLink(downloadUrl.href);
+      showMessage('The JSON file was opened in your external browser. Check Downloads or the browser download notification.', 'success');
+    } else {
+      window.location.assign(downloadUrl.href);
     }
   } catch (error) {
-    // A deliberate user cancellation should not create a second download flow.
-    if (error?.name === 'AbortError') return;
-    // Continue to the explicit download-link fallback.
+    showMessage('Download failed: ' + String(error?.message || error), 'warning');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Export history (JSON)';
+    }
   }
-
-  const previous = historyBox.querySelector('.history-export-download');
-  if (previous?.dataset.objectUrl) URL.revokeObjectURL(previous.dataset.objectUrl);
-
-  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.rel = 'noopener';
-  link.className = 'history-export-download';
-  link.dataset.objectUrl = url;
-  link.textContent = 'Tap here to download JSON';
-  link.setAttribute('aria-label', 'Tap to download scan history JSON file');
-
-  const toolbar = historyBox.querySelector('.history-actions');
-  if (toolbar) {
-    toolbar.querySelector('.history-export-download')?.remove();
-    toolbar.append(link);
-  } else {
-    historyBox.append(link);
-  }
-  showMessage('Tap “Tap here to download JSON” to save the file on your device.', 'success');
 }
 
 `;
