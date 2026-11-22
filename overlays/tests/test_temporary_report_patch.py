@@ -25,13 +25,15 @@ def health():
         self.assertLess(patched.index("from __future__ import annotations"), patched.index("import os"))
 
     def test_patch_is_idempotent(self):
-        source = "from fastapi import FastAPI\\napp = FastAPI()\\n"
+        source = """from fastapi import FastAPI
+app = FastAPI()
+"""
         once = patch_main_source(source)
         self.assertEqual(patch_main_source(once), once)
 
     def test_refuses_unknown_app_layout(self):
         with self.assertRaises(ValueError):
-            patch_main_source("app = object()\\n")
+            patch_main_source("app = object()")
 
 
 if __name__ == "__main__":
