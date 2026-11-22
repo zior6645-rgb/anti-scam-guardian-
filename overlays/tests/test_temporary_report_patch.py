@@ -6,7 +6,13 @@ from app.temporary_report_patch import patch_main_source
 
 class TemporaryReportPatchTests(unittest.TestCase):
     def test_injects_short_lived_single_use_download_routes(self):
-        source = "from fastapi import FastAPI\\napp = FastAPI()\\n@app.get('/health')\\ndef health():\\n    return {'ok': True}\\n"
+        source = """from __future__ import annotations
+from fastapi import FastAPI
+app = FastAPI()
+@app.get("/health")
+def health():
+    return {"ok": True}
+"""
         patched = patch_main_source(source)
         ast.parse(patched)
         self.assertIn('@app.post("/api/reports")', patched)
@@ -16,6 +22,7 @@ class TemporaryReportPatchTests(unittest.TestCase):
         self.assertIn('_REPORT_DOWNLOADS.pop(token, None)', patched)
         self.assertIn('Access-Control-Allow-Origin', patched)
         self.assertIn('Content-Disposition', patched)
+        self.assertLess(patched.index("from __future__ import annotations"), patched.index("import os"))
 
     def test_patch_is_idempotent(self):
         source = "from fastapi import FastAPI\\napp = FastAPI()\\n"
