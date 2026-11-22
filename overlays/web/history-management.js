@@ -1,7 +1,7 @@
 const HISTORY_HELPERS = `async function deleteHistoryItem(scanId) {
   if (!window.confirm('Delete this scan from your history?')) return;
   try {
-    const response = await fetch(`/api/history/${encodeURIComponent(scanId)}`, {
+    const response = await fetch('/api/history/' + encodeURIComponent(scanId), {
       method: 'DELETE',
       headers,
     });
@@ -20,7 +20,7 @@ async function deleteAllHistory() {
     const response = await fetch('/api/history', { method: 'DELETE', headers });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.detail || 'Could not delete your history.');
-    showMessage(`Deleted ${payload.deleted_count || 0} history item(s).`, 'success');
+    showMessage('Deleted ' + (payload.deleted_count || 0) + ' history item(s).', 'success');
     await loadHistory();
   } catch (error) {
     showMessage(error.message, 'warning');
