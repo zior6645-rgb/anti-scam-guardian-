@@ -32,7 +32,7 @@ async function deleteAllHistory() {
 export function applyHistoryManagement(source) {
   if (source.includes('async function deleteAllHistory()')) return source;
 
-  const renderAnchor = 'function renderHistory(items) {\\n  historyBox.replaceChildren();';
+  const renderAnchor = 'function renderHistory(items) {\n  historyBox.replaceChildren();';
   const renderReplacement = `function renderHistory(items) {
   historyBox.replaceChildren();
   if (items?.length) {
