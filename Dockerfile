@@ -11,7 +11,7 @@ WORKDIR /web
 COPY --from=source /source/anti-scam-guardian/web/ ./
 # Remove the Connect Wallet UI and SDK before npm installs dependencies.
 RUN node ./remove-wallet-connect.mjs && npm install --no-audit --no-fund
-RUN node ./apply-result-metadata.mjs && node ./apply-result-metadata.mjs && node ./apply-free-unlimited.mjs && node ./remove-wallet-connect.mjs && npm run build && ! grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|ton-connect|wallet-status|wallet-policy-note' /app/static
+RUN node ./apply-result-metadata.mjs && node ./apply-result-metadata.mjs && node ./apply-free-unlimited.mjs && node ./remove-wallet-connect.mjs && node ./apply-history-management.mjs && npm run build && ! grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|ton-connect|wallet-status|wallet-policy-note' /app/static
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1

@@ -31,10 +31,10 @@ test('missing evidence remains unknown and the report is not signed', () => {
   assert.match(text, /unsigned temporary export/);
 });
 
-test('Telegram native download uses the temporary first-party HTTPS report endpoint', () => {
+test('Telegram opens the temporary first-party HTTPS attachment in the external browser', () => {
   assert.ok(source.includes("fetch('/api/reports'"));
   assert.ok(source.includes('window.Telegram?.WebApp'));
-  assert.ok(source.includes('telegram.downloadFile({ url: downloadUrl.href, file_name: filename }'));
+  assert.ok(source.includes('telegram.openLink(downloadUrl.href)'));
   assert.ok(source.includes("downloadUrl.protocol !== 'https:'"));
   assert.ok(source.includes("credentials: 'same-origin'"));
 });

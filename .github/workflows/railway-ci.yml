@@ -73,7 +73,7 @@ jobs:
       - name: Compile and test backend
         working-directory: release/anti-scam-guardian
         run: |
-          python -m compileall -q app tests apply_free_mode_patch.py apply_product_limits_patch.py apply_wallet_removal_patch.py
+          python -m compileall -q app tests apply_free_mode_patch.py apply_product_limits_patch.py apply_wallet_removal_patch.py apply_history_deletion_patch.py
           python -m unittest discover -s tests -v
           if grep -RniE --exclude-dir=static 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|/tonconnect-manifest' app; then
             echo "A backend wallet-connection endpoint or manifest remains" >&2
@@ -96,6 +96,7 @@ jobs:
           node apply-result-metadata.mjs
           node apply-free-unlimited.mjs
           node remove-wallet-connect.mjs
+          node apply-history-management.mjs
           npm run build
           test -f ../app/static/index.html
           if grep -RniE 'TonConnectUI|tonconnect-manifest|@tonconnect/ui|ton-connect|wallet-status|wallet-policy-note' ../app/static; then

@@ -56,6 +56,7 @@ def reconstruct(output: Path) -> Path:
         "apply_product_limits_patch.py",
         "apply_free_mode_patch.py",
         "apply_wallet_removal_patch.py",
+        "apply_history_deletion_patch.py",
     ):
         shutil.copy2(root / "overlays/app" / name, source / name)
     for test in (root / "overlays/tests").iterdir():
@@ -109,6 +110,11 @@ def reconstruct(output: Path) -> Path:
     # because that legacy patch intentionally removes JSONResponse from its import list.
     subprocess.run(
         [sys.executable, "-m", "app.temporary_report_patch", "app/main.py"],
+        cwd=source,
+        check=True,
+    )
+    subprocess.run(
+        [sys.executable, "apply_history_deletion_patch.py", "app/database.py", "app/main.py"],
         cwd=source,
         check=True,
     )
