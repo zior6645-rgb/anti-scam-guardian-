@@ -27,13 +27,42 @@ async function deleteAllHistory() {
   }
 }
 
+function applyHistoryFilters() {
+  const search = (document.getElementById('history-search')?.value || '').trim().toLowerCase();
+  const risk = document.getElementById('history-risk-filter')?.value || 'all';
+  const cards = Array.from(historyBox.querySelectorAll('[data-history-entry]'));
+  let visible = 0;
+  for (const card of cards) {
+    const matchesSearch = !search || (card.dataset.historySearch || '').includes(search);
+    const matchesRisk = risk === 'all' || card.dataset.historyRisk === risk;
+    const show = matchesSearch && matchesRisk;
+    card.hidden = !show;
+    if (show) visible += 1;
+  }
+  const summary = document.getElementById('history-filter-summary');
+  if (summary) summary.textContent = visible + ' of ' + cards.length + ' scans shown';
+}
+
+function exportHistoryJson(items) {
+  const blob = new Blob([JSON.stringify(items || [], null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'antiscam-guardian-history.json';
+  link.rel = 'noopener';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 `;
 
 export function applyHistoryManagement(source) {
-  if (source.includes('async function deleteAllHistory()')) return source;
-
-  const renderAnchor = 'function renderHistory(items) {\n  historyBox.replaceChildren();';
-  const renderReplacement = `function renderHistory(items) {
+  const alreadyPatched = source.includes('async function deleteAllHistory()');
+  if (!alreadyPatched) {
+    const renderAnchor = 'function renderHistory(items) {\\n  historyBox.replaceChildren();';
+    const renderReplacement = `function renderHistory(items) {
   historyBox.replaceChildren();
   if (items?.length) {
     const toolbar = document.createElement('div');
@@ -46,13 +75,13 @@ export function applyHistoryManagement(source) {
     toolbar.append(deleteAllButton);
     historyBox.append(toolbar);
   }`;
-  if (source.split(renderAnchor).length !== 2) {
-    throw new Error('Could not uniquely locate renderHistory() for deletion controls');
-  }
-  source = source.replace(renderAnchor, renderReplacement);
+    if (source.split(renderAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate renderHistory() for deletion controls');
+    }
+    source = source.replace(renderAnchor, renderReplacement);
 
-  const cardAnchor = '    historyBox.append(card);';
-  const cardReplacement = `    const actions = document.createElement('div');
+    const cardAnchor = '    historyBox.append(card);';
+    const cardReplacement = `    const actions = document.createElement('div');
     actions.className = 'history-actions';
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
@@ -63,33 +92,123 @@ export function applyHistoryManagement(source) {
     actions.append(deleteButton);
     card.append(actions);
     historyBox.append(card);`;
-  if (source.split(cardAnchor).length !== 2) {
-    throw new Error('Could not uniquely locate history card append for delete button');
-  }
-  source = source.replace(cardAnchor, cardReplacement);
+    if (source.split(cardAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate history card append for delete button');
+    }
+    source = source.replace(cardAnchor, cardReplacement);
 
-  const helperAnchor = 'function renderHistory(items) {';
-  if (source.split(helperAnchor).length !== 2) {
-    throw new Error('Could not uniquely locate renderHistory() helper insertion point');
+    const helperAnchor = 'function renderHistory(items) {';
+    if (source.split(helperAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate renderHistory() helper insertion point');
+    }
+    source = source.replace(helperAnchor, HISTORY_HELPERS + helperAnchor);
   }
-  source = source.replace(helperAnchor, HISTORY_HELPERS + helperAnchor);
+
+  return applyHistoryEnhancements(source);
+}
+
+function applyHistoryEnhancements(source) {
+  const cardAnchor = '    card.append(actions);';
+  const cardReplacement = `    card.dataset.historyEntry = 'true';
+    card.dataset.historySearch = JSON.stringify(entry || {}).toLowerCase();
+    card.dataset.historyRisk = String(entry?.result?.risk_level || entry?.risk_level || 'unknown').toLowerCase();
+    card.append(actions);`;
+  if (!source.includes("card.dataset.historyEntry = 'true';")) {
+    if (source.split(cardAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate history card metadata insertion point');
+    }
+    source = source.replace(cardAnchor, cardReplacement);
+  }
+
+  const toolbarAnchor = `    toolbar.append(deleteAllButton);
+    historyBox.append(toolbar);`;
+  const toolbarReplacement = `    toolbar.append(deleteAllButton);
+
+    const search = document.createElement('input');
+    search.id = 'history-search';
+    search.type = 'search';
+    search.placeholder = 'Search address, URL, token or result…';
+    search.setAttribute('aria-label', 'Search scan history');
+    search.addEventListener('input', applyHistoryFilters);
+
+    const riskFilter = document.createElement('select');
+    riskFilter.id = 'history-risk-filter';
+    riskFilter.setAttribute('aria-label', 'Filter scan history by risk');
+    for (const [value, label] of [
+      ['all', 'All results'],
+      ['high', 'High risk'],
+      ['critical', 'Critical'],
+      ['caution', 'Caution'],
+      ['suspicious', 'Suspicious'],
+      ['no_obvious_flags', 'No obvious flags'],
+      ['unknown', 'Unknown / not assessed'],
+    ]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      riskFilter.append(option);
+    }
+    riskFilter.addEventListener('change', applyHistoryFilters);
+
+    const exportButton = document.createElement('button');
+    exportButton.type = 'button';
+    exportButton.className = 'history-export';
+    exportButton.textContent = 'Export history (JSON)';
+    exportButton.addEventListener('click', () => exportHistoryJson(items));
+
+    const summary = document.createElement('p');
+    summary.id = 'history-filter-summary';
+    summary.className = 'history-filter-summary';
+    toolbar.append(search, riskFilter, exportButton, summary);
+    historyBox.append(toolbar);`;
+  if (!source.includes("id = 'history-search'")) {
+    if (source.split(toolbarAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate history toolbar enhancement point');
+    }
+    source = source.replace(toolbarAnchor, toolbarReplacement);
+  }
+  if (!source.includes('function applyHistoryFilters()')) {
+    const helperAnchor = 'function renderHistory(items) {';
+    if (source.split(helperAnchor).length !== 2) {
+      throw new Error('Could not uniquely locate history filter helper insertion point');
+    }
+    source = source.replace(helperAnchor, HISTORY_HELPERS + helperAnchor);
+  }
+  if (!source.includes('.history-filter-summary')) {
+    // Styling is added by applyHistoryStyles below.
+  }
   return source;
 }
 
 export function applyHistoryStyles(source) {
-  const marker = '/* AntiScam Guardian history deletion controls */';
+  const marker = '/* AntiScam Guardian history deletion and filtering controls */';
   if (source.includes(marker)) return source;
   return source + `
 
 ${marker}
 .history-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 0.65rem;
 }
+.history-actions input,
+.history-actions select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 150px;
+  border: 1px solid #38516f;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  background: #111d2e;
+  color: inherit;
+  font: inherit;
+}
 .history-delete-button,
-.history-delete-all {
+.history-delete-all,
+.history-export {
   border: 1px solid rgba(255, 120, 120, 0.45);
   border-radius: 0.65rem;
   padding: 0.45rem 0.75rem;
@@ -98,13 +217,24 @@ ${marker}
   font: inherit;
   cursor: pointer;
 }
-.history-delete-all {
-  font-size: 0.9rem;
+.history-export {
+  border-color: #38516f;
+  background: #17283d;
+}
+.history-filter-summary {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #91a2ba;
+  font-size: 0.8rem;
 }
 .history-delete-button:disabled,
-.history-delete-all:disabled {
+.history-delete-all:disabled,
+.history-export:disabled {
   opacity: 0.55;
   cursor: wait;
+}
+[data-history-entry][hidden] {
+  display: none !important;
 }
 `;
 }
