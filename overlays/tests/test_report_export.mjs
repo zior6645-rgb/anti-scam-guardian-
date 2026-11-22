@@ -4,7 +4,11 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../web/src/report-export.js', import.meta.url), 'utf8')
   .catch(() => readFile(new URL('../web/report-export.js', import.meta.url), 'utf8'));
-const { reportText } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const metadataSource = await readFile(new URL('../web/src/result-metadata.js', import.meta.url), 'utf8')
+  .catch(() => readFile(new URL('../web/result-metadata.js', import.meta.url), 'utf8'));
+const metadataUrl = `data:text/javascript;base64,${Buffer.from(metadataSource).toString('base64')}`;
+const runnableSource = source.replace("'./result-metadata.js'", `'${metadataUrl}'`);
+const { reportText } = await import(`data:text/javascript;base64,${Buffer.from(runnableSource).toString('base64')}`);
 
 test('export uses the canonical report builder and preserves scan evidence', () => {
   const text = reportText({
@@ -29,10 +33,10 @@ test('missing evidence remains unknown and the report is not signed', () => {
 
 test('Telegram native download uses the temporary first-party HTTPS report endpoint', () => {
   assert.ok(source.includes("fetch('/api/reports'"));
-  assert.ok(source.includes("window.Telegram?.WebApp"));
+  assert.ok(source.includes('window.Telegram?.WebApp'));
   assert.ok(source.includes('telegram.downloadFile({ url: downloadUrl.href, file_name: filename }'));
   assert.ok(source.includes("downloadUrl.protocol !== 'https:'"));
-  assert.ok(source.includes('credentials: \'same-origin\''));
+  assert.ok(source.includes("credentials: 'same-origin'"));
 });
 
 test('fallbacks remain available when Telegram native download is unavailable', () => {
