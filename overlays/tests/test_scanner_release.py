@@ -154,6 +154,29 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("No match in one threat feed", result["disclaimer"])
         self.assertIn("does not prove safety", result["disclaimer"])
 
+    async def test_documentation_domain_has_no_obvious_flags_without_external_sharing(self):
+        settings = SimpleNamespace(phishtank_app_key="")
+        with patch("app.scanner.get_settings", return_value=settings):
+            result = await scan_url("https://example.com")
+        self.assertEqual(result["risk_level"], "no_obvious_flags")
+        self.assertEqual(result["flags"], [])
+        self.assertEqual(result["method"], "local_heuristics_only")
+        self.assertFalse(result["external_lookup_shared"])
+
+    async def test_suspicious_tld_is_reported_as_caution(self):
+        settings = SimpleNamespace(phishtank_app_key="")
+        with patch("app.scanner.get_settings", return_value=settings):
+            result = await scan_url("https://account-security.click/login")
+        self.assertEqual(result["risk_level"], "caution")
+        self.assertTrue(any("TLD" in flag for flag in result["flags"]))
+
+    async def test_redirect_parameter_is_reported(self):
+        settings = SimpleNamespace(phishtank_app_key="")
+        with patch("app.scanner.get_settings", return_value=settings):
+            result = await scan_url("http://example.com/login?redirect=https%3A%2F%2Fother.example")
+        self.assertTrue(any("redirect-style parameters" in flag for flag in result["flags"]))
+        self.assertGreaterEqual(result["heuristic_score"], 20)
+
 
 if __name__ == "__main__":
     unittest.main()
