@@ -193,7 +193,7 @@ async def _check_phishtank(url: str, app_key: str | None = None) -> dict:
         timeout = httpx.Timeout(8.0, connect=4.0)
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
             response = await client.post(PHISHTANK_ENDPOINT, data=data, headers=headers)
-        if response.status_code == 509:
+        if response.status_code in {429, 509}:
             return {"provider": "PhishTank", "status": "rate_limited"}
         response.raise_for_status()
         body = response.json()
@@ -369,9 +369,9 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
         "flags": flags,
         "method": method,
         "threat_intelligence": intelligence,
-        "external_lookup_shared": bool(
-            share_with_phishtank and intelligence["status"] not in {"unavailable", "rate_limited"}
-        ),
+        # Consent means the submitted URL may have reached the external provider,
+        # even when its response is timed out, unavailable or rate-limited.
+        "external_lookup_shared": bool(share_with_phishtank),
         "disclaimer": (
             f"{feed_note} "
             "Heuristic scores are rule-based indicators, not probabilities. "
