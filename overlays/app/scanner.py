@@ -312,7 +312,7 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
     settings = get_settings()
     intelligence = {
         "provider": "PhishTank",
-        "status": "not_checked_no_consent",
+        "status": "not_configured" if not settings.phishtank_app_key else "not_checked_no_consent",
     }
     # PhishTank documents app_key as optional for low-volume lookups. The URL
     # is sent only after explicit user consent, with the key omitted if absent.
@@ -336,11 +336,16 @@ async def scan_url(value: str, *, share_with_phishtank: bool = False) -> dict:
 
     method = (
         "heuristics_plus_phishtank"
-        if intelligence["status"] not in {"not_checked_no_consent", "unavailable", "rate_limited"}
+        if intelligence["status"] not in {"not_configured", "not_checked_no_consent", "unavailable", "rate_limited"}
         else "local_heuristics_only"
     )
     feed_status = intelligence["status"]
-    if feed_status == "not_checked_no_consent":
+    if feed_status == "not_configured":
+        feed_note = (
+            "No PhishTank app key is configured. Low-volume lookups without a key are still "
+            "available, but this URL was not sent because external sharing was not approved."
+        )
+    elif feed_status == "not_checked_no_consent":
         feed_note = "PhishTank was not queried because external sharing was not approved."
     elif feed_status == "not_listed":
         feed_note = "PhishTank did not list this URL in the lookup performed; this is not proof of safety."
