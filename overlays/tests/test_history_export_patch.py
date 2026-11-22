@@ -1,7 +1,7 @@
 import importlib.util
 from pathlib import Path
 
-PATCH = Path(__file__).resolve().parents[1] / "app" / "history_export_patch.py"
+PATCH = Path(__file__).resolve().parents[1] / "history_export_patch.py"
 SPEC = importlib.util.spec_from_file_location("history_export_patch", PATCH)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
