@@ -51,7 +51,7 @@ export function applyHistoryManagement(source) {
   }
   source = source.replace(renderAnchor, renderReplacement);
 
-  const cardAnchor = '    card.append(heading, subject, time);';
+  const cardAnchor = '    historyBox.append(card);';
   const cardReplacement = `    const actions = document.createElement('div');
     actions.className = 'history-actions';
     const deleteButton = document.createElement('button');
@@ -61,9 +61,10 @@ export function applyHistoryManagement(source) {
     deleteButton.setAttribute('aria-label', 'Delete this scan from history');
     deleteButton.addEventListener('click', () => deleteHistoryItem(entry.id));
     actions.append(deleteButton);
-    card.append(heading, subject, time, actions);`;
+    card.append(actions);
+    historyBox.append(card);`;
   if (source.split(cardAnchor).length !== 2) {
-    throw new Error('Could not uniquely locate history card rendering for delete button');
+    throw new Error('Could not uniquely locate history card append for delete button');
   }
   source = source.replace(cardAnchor, cardReplacement);
 
