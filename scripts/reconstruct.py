@@ -71,7 +71,6 @@ def reconstruct(output: Path) -> Path:
         ["apply_free_mode_patch.py", "app/bot.py"],
         ["apply_wallet_removal_patch.py", "app"],
         ["-m", "app.runtime_security_patch", "app/runtime.py"],
-        ["-m", "app.temporary_report_patch", "app/main.py"],
     ]
     for args in commands:
         subprocess.run([sys.executable, *args], cwd=source, check=True)
@@ -105,6 +104,14 @@ def reconstruct(output: Path) -> Path:
         )
     if manifest.exists():
         raise RuntimeError("TON Connect manifest file reappeared after the second patch pass")
+
+    # Apply the report routes only after wallet removal has completed its idempotence pass,
+    # because that legacy patch intentionally removes JSONResponse from its import list.
+    subprocess.run(
+        [sys.executable, "-m", "app.temporary_report_patch", "app/main.py"],
+        cwd=source,
+        check=True,
+    )
     print("All production Python patchers are idempotent.")
     print("TON Connect backend route and manifest are removed.")
     print(f"Release source ready: {source}")
