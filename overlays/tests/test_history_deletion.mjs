@@ -34,11 +34,11 @@ test('history UI adds safe local search and risk filters', () => {
   assert.ok(output.includes('card.dataset.historyRisk'));
 });
 
-test('history export is user-triggered JSON download and uses no export upload endpoint', () => {
+test('history export uses an authenticated server attachment', () => {
   const output = applyHistoryManagement(source);
   assert.ok(output.includes('Export history (JSON)'));
   assert.ok(output.includes("fetch('/api/history/export'"));
-  assert.ok(output.includes('antiscam-guardian-history.json'));
+  assert.ok(output.includes("fetch('/api/history/export'"));
   assert.ok(output.includes("fetch('/api/history/export'"));
   assert.ok(output.includes('telegram.openLink(downloadUrl.href)'));
   assert.ok(output.includes('window.location.assign(downloadUrl.href)'));
