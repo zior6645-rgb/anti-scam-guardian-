@@ -60,6 +60,13 @@ export function buildScanReportText(result, timestamp = new Date()) {
     : "- No indicator was returned. This is not proof of safety.";
   const provider = result?.threat_intelligence || {};
   const metadata = [];
+  if (result?.kind === "url") {
+    if (result?.hostname) metadata.push("Hostname: " + String(result.hostname));
+    if (result?.registrable_domain) metadata.push("Registrable domain: " + String(result.registrable_domain));
+    if (Number.isFinite(Number(result?.heuristic_score))) {
+      metadata.push("Heuristic score: " + String(result.heuristic_score) + "/100 (rule-based score, not a probability)");
+    }
+  }
   if (result?.method) metadata.push("Method: " + String(result.method));
   if (provider.provider || provider.status) {
     metadata.push("Threat intelligence: " + [provider.provider, provider.status].filter(Boolean).join(" — "));
@@ -109,7 +116,17 @@ export function appendResultMetadata(root, result) {
     entries.push([label, String(value)]);
   };
 
-  if (result.kind === "token") {
+  if (result.kind === "url") {
+    add("Hostname", result.hostname || result.subject);
+    add("Registrable domain", result.registrable_domain);
+    if (Number.isFinite(Number(result.heuristic_score))) {
+      add("Heuristic score", String(result.heuristic_score) + "/100 (rule-based, not a probability)");
+    }
+    add("Scan method", result.method);
+    if (result.threat_intelligence?.provider || result.threat_intelligence?.status) {
+      add("Threat intelligence", [result.threat_intelligence.provider, result.threat_intelligence.status].filter(Boolean).join(" — "));
+    }
+  } else if (result.kind === "token") {
     add("Token name", result.token_name);
     add("Token symbol", result.token_symbol);
     add("Decimals", result.decimals);
