@@ -26,7 +26,7 @@ test('export uses the canonical report builder and preserves scan evidence', () 
 
 test('missing evidence remains unknown and the report is not signed', () => {
   const text = reportText(null, '2026-01-01T00:00:00Z');
-  assert.match(text, /Verdict: unknown/);
+  assert.match(text, /Verdict: Insufficient data/);
   assert.match(text, /No indicator was returned/);
   assert.match(text, /unsigned temporary export/);
 });
