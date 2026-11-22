@@ -225,6 +225,19 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("local_heuristics_only", result["method"])
         self.assertIn("does not prove safety", result["disclaimer"])
 
+    async def test_phishtank_rate_limit_still_records_external_sharing(self):
+        settings = SimpleNamespace(phishtank_app_key="")
+        client = FakeAsyncClient(FakeResponse(429, {}))
+        with (
+            patch("app.scanner.get_settings", return_value=settings),
+            patch("app.scanner.httpx.AsyncClient", return_value=client),
+        ):
+            result = await scan_url("https://example.com", share_with_phishtank=True)
+
+        self.assertEqual(result["threat_intelligence"]["status"], "rate_limited")
+        self.assertTrue(result["external_lookup_shared"])
+        self.assertEqual(result["method"], "local_heuristics_only")
+
     async def test_phishtank_low_volume_lookup_works_without_app_key_after_consent(self):
         settings = SimpleNamespace(phishtank_app_key="")
         client = FakeAsyncClient(FakeResponse(200, {"results": {"in_database": "no"}}))
