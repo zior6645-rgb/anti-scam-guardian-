@@ -57,6 +57,7 @@ def reconstruct(output: Path) -> Path:
         "apply_free_mode_patch.py",
         "apply_wallet_removal_patch.py",
         "apply_history_deletion_patch.py",
+        "history_export_patch.py",
     ):
         shutil.copy2(root / "overlays/app" / name, source / name)
     for test in (root / "overlays/tests").iterdir():
@@ -115,6 +116,11 @@ def reconstruct(output: Path) -> Path:
     )
     subprocess.run(
         [sys.executable, "apply_history_deletion_patch.py", "app/database.py", "app/main.py"],
+        cwd=source,
+        check=True,
+    )
+    subprocess.run(
+        [sys.executable, "history_export_patch.py", "app/main.py"],
         cwd=source,
         check=True,
     )
