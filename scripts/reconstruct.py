@@ -50,7 +50,7 @@ def reconstruct(output: Path) -> Path:
         if removed != 1:
             raise RuntimeError("Could not locate the obsolete TON Connect manifest API test")
         legacy_api_test.write_text(ast.unparse(tree) + "\n", encoding="utf-8")
-    for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py"):
+    for name in ("scanner.py", "backup_supervisor.py", "restore_backup.py", "runtime_security_patch.py", "temporary_report_patch.py"):
         shutil.copy2(root / "overlays/app" / name, source / "app" / name)
     for name in (
         "apply_product_limits_patch.py",
@@ -104,6 +104,14 @@ def reconstruct(output: Path) -> Path:
         )
     if manifest.exists():
         raise RuntimeError("TON Connect manifest file reappeared after the second patch pass")
+
+    # Apply the report routes only after wallet removal has completed its idempotence pass,
+    # because that legacy patch intentionally removes JSONResponse from its import list.
+    subprocess.run(
+        [sys.executable, "-m", "app.temporary_report_patch", "app/main.py"],
+        cwd=source,
+        check=True,
+    )
     print("All production Python patchers are idempotent.")
     print("TON Connect backend route and manifest are removed.")
     print(f"Release source ready: {source}")

@@ -135,4 +135,26 @@ if (!updatedCss.includes(".wallet-policy-note")) {
 `;
   await writeFile(cssPath, updatedCss + policyStyles);
 }
-console.log("Mini App metadata renderer and wallet policy notice patched successfully.");
+// Make the in-app refresh control reliable even when its original handler is unavailable.
+const refreshMarker = "anti-scam-refresh-fallback";
+if (!main.includes(refreshMarker)) {
+  main += `
+
+// ${refreshMarker}: a full Mini App reload refreshes the server-backed history and UI state.
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest('button, [role="button"]');
+  if (!button) return;
+  const label = (button.getAttribute('aria-label') || button.getAttribute('title') || button.textContent || '')
+    .trim().toLowerCase().replace(/\\s+/g, ' ');
+  if (!/^(refresh|refresh history|reload|تازه سازی|تازه‌سازی|بروزرسانی|به‌روزرسانی)$/.test(label)) return;
+  event.preventDefault();
+  if ('disabled' in button) button.disabled = true;
+  window.location.reload();
+});
+`;
+  await writeFile(mainPath, main);
+}
+
+console.log("Mini App metadata, report download, refresh fallback and wallet policy notice patched.");
