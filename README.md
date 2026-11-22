@@ -19,7 +19,7 @@ A free Telegram-first security screening assistant for suspicious URLs, TON wall
 - Optional PhishTank lookup only after explicit per-scan user consent and only when an operator-supplied application key is configured.
 - TON account metadata through TonAPI, including the provider’s current scam indicator when available.
 - TON Jetton master metadata through TonAPI, including name, symbol, decimals, supply, mintability, holder count and provider verification classification.
-- Telegram Mini App authentication, recent scan history and local report export.
+- Telegram Mini App authentication, searchable scan history, risk-level filters, per-item and bulk deletion, user-triggered JSON history export, and local report export.
 - Persistent SQLite storage and automatic encrypted database backups.
 
 ## Important limitations
