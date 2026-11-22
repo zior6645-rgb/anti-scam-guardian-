@@ -113,3 +113,24 @@ test("untrusted provider metadata is assigned as text, never parsed as HTML", ()
     delete globalThis.document;
   }
 });
+
+test("URL report includes registrable domain and explains heuristic score", () => {
+  const report = buildScanReportText({
+    kind: "url",
+    subject: "google.com.example.com",
+    hostname: "google.com.example.com",
+    registrable_domain: "example.com",
+    risk_level: "high",
+    heuristic_score: 55,
+    flags: ["The hostname uses the brand name 'google' outside its official domain"],
+    method: "local_heuristics_only",
+    threat_intelligence: { provider: "PhishTank", status: "not_configured" },
+    disclaimer: "Limited screening only.",
+  }, new Date("2026-11-22T02:00:00.000Z"));
+
+  assert.match(report, /Verdict: High-risk indicators found/);
+  assert.match(report, /Registrable domain: example.com/);
+  assert.match(report, /Heuristic score: 55\/100 \(rule-based score, not a probability\)/);
+  assert.match(report, /PhishTank — not_configured/);
+  assert.match(report, /brand name 'google'/);
+});
