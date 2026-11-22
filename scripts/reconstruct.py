@@ -27,6 +27,14 @@ def reconstruct(output: Path) -> Path:
     with tarfile.open(fileobj=io.BytesIO(archive), mode="r:xz") as bundle:
         bundle.extractall(output, filter="data")
     source = output / "anti-scam-guardian"
+    # Pin the offline Public Suffix List parser used by the URL scanner. The
+    # extractor is configured not to fetch suffix data at runtime.
+    requirements = source / "requirements.txt"
+    if requirements.is_file():
+        lines = requirements.read_text(encoding="utf-8").splitlines()
+        if not any(line.strip().lower().split("=", 1)[0].strip() == "tldextract" for line in lines):
+            lines.append("tldextract==5.3.2")
+            requirements.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     # The pinned archive contains an obsolete API test that expects the TON
     # Connect manifest to return 200. The wallet-free release intentionally
     # removes that endpoint; retain the rest of the API test suite.
