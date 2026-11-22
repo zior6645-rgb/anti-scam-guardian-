@@ -76,6 +76,14 @@ class FreeUnlimitedApiTests(unittest.TestCase):
         self.scanner.side_effect = None
         self.assertEqual(self.scan().status_code, 200)
 
+    def test_single_label_hostname_is_rejected_by_api_before_provider_call(self):
+        response = self.client.post("/api/scan", json={
+            "kind": "url",
+            "value": "not-a-valid-url",
+        })
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.scanner.await_count, 0)
+
     def test_invalid_input_does_not_call_provider(self):
         response = self.client.post("/api/scan", json={
             "kind": "url",
