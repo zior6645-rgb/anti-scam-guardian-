@@ -220,7 +220,7 @@ class ScannerReleaseTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["risk_level"], "caution")
         self.assertEqual(result["threat_intelligence"]["status"], "not_configured")
-        self.assertIn("no PhishTank app key is configured", result["disclaimer"])
+        self.assertIn("No PhishTank app key is configured", result["disclaimer"])
         self.assertIn("not sent because external sharing was not approved", result["disclaimer"])
         self.assertIn("local_heuristics_only", result["method"])
         self.assertIn("does not prove safety", result["disclaimer"])
