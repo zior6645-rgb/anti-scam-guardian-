@@ -20,11 +20,11 @@ def _insert_imports(source: str) -> str:
         line_end = 0
     lines = source.splitlines(keepends=True)
     imports = (
-        "import os\\n"
-        "import secrets\\n"
-        "import time\\n"
-        "from fastapi import Request\\n"
-        "from fastapi.responses import JSONResponse, Response\\n"
+        "import os\n"
+        "import secrets\n"
+        "import time\n"
+        "from fastapi import Request\n"
+        "from fastapi.responses import JSONResponse, Response\n"
     )
     return "".join(lines[:line_end]) + imports + "".join(lines[line_end:])
 
@@ -58,7 +58,8 @@ def patch_main_source(source: str) -> str:
         raise ValueError("FastAPI app assignment became ambiguous after import insertion")
     line_end = app_assignments[0].end_lineno
     lines = source.splitlines(keepends=True)
-    insertion = """\\n
+    insertion = """
+
 # AntiScam Guardian: short-lived, single-use Telegram report downloads.
 _REPORT_DOWNLOADS: dict[str, tuple[float, bytes]] = {}
 _REPORT_UPLOADS_BY_IP: dict[str, list[float]] = {}
